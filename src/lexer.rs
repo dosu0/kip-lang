@@ -1,117 +1,212 @@
+///! A lexer; the important code is contained in the `TokenStream` struct
+use std::fmt;
 use std::str::Chars;
+pub use Token::*;
 
-#[derive(Debug, PartialEq, PartialOrd)]
+#[derive(Debug, PartialEq, PartialOrd, Clone)]
 pub enum Token {
-    Def,
+    // keywords
+    Func,
     Extern,
-    Identifier(String),
+    Var,
+
+    // primary
+    Ident(String),
     Number(f64),
+
+    // symbols
+    /// `(`
+    OpenParen,
+    /// `)`
+    CloseParen,
+    /// `{`
+    OpenBrace,
+    /// `}`
+    CloseBrace,
+    /// `,`
+    Comma,
+    /// `;`
+    Semicolon,
+
+    // misc
+    Op(char),
     Unknown(char),
+    Eof,
 }
 
-struct Tokenizer<'a> {
+impl fmt::Display for Token {
+    /// TODO: refactor?
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Func => "func".fmt(f),
+            Extern => "extern".fmt(f),
+            Var => "var".fmt(f),
+            Ident(s) => s.fmt(f),
+            Number(v) => v.fmt(f),
+            OpenParen => ')'.fmt(f),
+            CloseParen => '('.fmt(f),
+            OpenBrace => '{'.fmt(f),
+            CloseBrace => '}'.fmt(f),
+            Comma => ','.fmt(f),
+            Semicolon => ';'.fmt(f),
+            Op(ch) => ch.fmt(f),
+            Unknown(ch) => ch.fmt(f),
+            Eof => "end of file".fmt(f),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct TokenStream<'a> {
     chars: Chars<'a>,
+    line: usize,
+    col: usize,
 }
 
-impl<'a> Tokenizer<'a> {
+fn is_id_start(ch: char) -> bool {
+    ('a'..='z').contains(&ch) || ('A'..='Z').contains(&ch) || ch == '_'
+}
+
+fn is_id_cont(ch: char) -> bool {
+    ('a'..='z').contains(&ch)
+        || ('A'..='Z').contains(&ch)
+        || ('0'..='9').contains(&ch)
+        || ch == '_'
+}
+
+impl<'a> TokenStream<'a> {
     pub fn new(input: &'a str) -> Self {
         Self {
             chars: input.chars(),
+            line: 1,
+            col: 0,
         }
     }
 
-    fn next_token(&mut self) -> Option<Token> {
-        let fst_char = self.bump()?;
+    pub fn eat(&mut self) -> Token {
+        let fst_ch = match self.bump() {
+            Some(c) => c,
+            None => return Token::Eof,
+        };
 
-        match fst_char {
+        match fst_ch {
             // Line Comments ('//')
             '/' => {
-                if self.first() == '/' {
+                if self.peek_ch() == '/' {
                     self.bump();
-                    while self.first() != '\n' {
+
+                    let mut ch = self.peek_ch();
+
+                    while ch != '\n' && ch != '\0' {
                         self.bump();
+                        ch = self.peek_ch();
                     }
-                    self.next_token()
+
+                    self.eat()
                 } else {
-                    Some(Token::Unknown('/'))
+                    Token::Op('/')
                 }
             }
 
             // Skip whitespace
-            c if c.is_ascii_whitespace() => {
-                while self.first().is_ascii_whitespace() {
+            ch if ch.is_ascii_whitespace() => {
+                while self.peek_ch().is_ascii_whitespace() {
                     self.bump();
                 }
 
-                self.next_token()
+                self.eat()
             }
 
-            // Identifiers
-            c if c.is_ascii_alphabetic() => {
-                let mut s = String::from(c);
-                while self.first().is_ascii_alphanumeric() {
+            // Identifiers and reserved words
+            ch if is_id_start(ch) => {
+                let mut s = String::from(ch);
+                while is_id_cont(self.peek_ch()) {
                     s.push(self.bump().unwrap());
                 }
 
-                Some(if s == "def" {
-                    Token::Def
-                } else if s == "extern" {
-                    Token::Extern
-                } else {
-                    Token::Identifier(s)
-                })
+                match &*s {
+                    "func" => Func,
+                    "extern" => Extern,
+                    "var" => Var,
+                    s => Ident(s.to_owned()),
+                }
             }
 
             // Number Literals
-            c if c.is_ascii_digit() => {
-                let mut s = String::from(c);
+            ch @ '0'..='9' => {
+                let mut s = String::from(ch);
 
-                while self.first().is_ascii_digit() {
+                while self.peek_ch().is_ascii_digit() {
                     s.push(self.bump().unwrap());
                 }
 
                 // Handle decimal points
-                if self.first() == '.' {
+                if self.peek_ch() == '.' {
                     s.push(self.bump().unwrap());
-                    while self.first().is_ascii_digit() {
+                    while self.peek_ch().is_ascii_digit() {
                         s.push(self.bump().unwrap());
                     }
                 }
 
-                dbg!(&s);
-
                 // TODO: Add error handling
-                match s.parse() {
-                    Ok(n) => Some(Token::Number(n)),
-                    Err(_) => None,
-                }
+                Number(s.parse().unwrap())
             }
 
-            c @ _ => Some(Token::Unknown(c)),
+            '(' => OpenParen,
+            ')' => CloseParen,
+            '{' => OpenBrace,
+            '}' => CloseBrace,
+            ',' => Comma,
+            ';' => Semicolon,
+            ch @ ('>' | '<' | '+' | '-' | '*' | '=') => Op(ch),
+            ch => Unknown(ch),
         }
     }
 
-    // peek
-    fn first(&self) -> char {
-        self.chars.clone().nth(0).unwrap_or('\0')
+    fn peek_ch(&self) -> char {
+        self.chars.clone().next().unwrap_or('\0')
     }
 
-    // peek again
-    fn second(&self) -> char {
-        self.chars.clone().nth(1).unwrap_or('\0')
+    /// peek at the next token without '`eat`'ing it
+    pub fn peek(&self) -> Token {
+        self.clone().eat()
+    }
+
+    /// retreive line number
+    pub fn line(&self) -> usize {
+        self.line
+    }
+
+    /// retreive column number
+    pub fn col(&self) -> usize {
+        self.col
     }
 
     /// Move to the next character
     fn bump(&mut self) -> Option<char> {
-        self.chars.next()
+        let ch = self.chars.next();
+
+        match ch {
+            Some('\n') => {
+                self.line += 1;
+                self.col = 0;
+            }
+            Some(_) => self.col += 1,
+            _ => {}
+        }
+
+        ch
     }
 }
 
-impl<'a> Iterator for Tokenizer<'a> {
+impl<'a> Iterator for TokenStream<'a> {
     type Item = Token;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.next_token()
+        match self.eat() {
+            Token::Eof => None,
+            t => Some(t),
+        }
     }
 }
 
@@ -120,37 +215,41 @@ mod tests {
     use super::*;
 
     #[test]
-    fn identifiers_and_unknown_tokens() {
-        let input = "def func()";
-        let mut tokenizer = Tokenizer::new(input);
-        assert_eq!(tokenizer.next(), Some(Token::Def));
+    fn identifiers_and_parens() {
+        let input = "func foo()";
+        let mut tokens = TokenStream::new(input);
+        assert_eq!(tokens.next(), Some(Token::Func));
         // Should skip whitespace...
-        assert_eq!(
-            tokenizer.next(),
-            Some(Token::Identifier(String::from("func")))
-        );
-        assert_eq!(tokenizer.next(), Some(Token::Unknown('(')));
-        assert_eq!(tokenizer.next(), Some(Token::Unknown(')')));
+        assert_eq!(tokens.next(), Some(Token::Ident(String::from("foo"))));
+        assert_eq!(tokens.next(), Some(Token::OpenParen));
+        assert_eq!(tokens.next(), Some(Token::CloseParen));
         // Should return None when done lexing...
-        assert_eq!(tokenizer.next(), None);
-        assert_eq!(tokenizer.next(), None);
+        assert_eq!(tokens.next(), None);
+        assert_eq!(tokens.next(), None);
     }
 
     #[test]
-    fn numbers() {
-        let input = "42 3.14";
-        let mut tokenizer = Tokenizer::new(input);
-        assert_eq!(tokenizer.next(), Some(Token::Number(42.0)));
-        assert_eq!(tokenizer.next(), Some(Token::Number(3.14)));
-        assert_eq!(tokenizer.next(), None);
+    fn numbers_ops_and_commas() {
+        let input = "42 + 3.14, 69 * 100, 1000";
+        let mut tokens = TokenStream::new(input);
+        assert_eq!(tokens.next(), Some(Token::Number(42.0)));
+        assert_eq!(tokens.next(), Some(Token::Op('+')));
+        assert_eq!(tokens.next(), Some(Token::Number(3.14)));
+        assert_eq!(tokens.next(), Some(Token::Comma));
+        assert_eq!(tokens.next(), Some(Token::Number(69.0)));
+        assert_eq!(tokens.next(), Some(Token::Op('*')));
+        assert_eq!(tokens.next(), Some(Token::Number(100.0)));
+        assert_eq!(tokens.next(), Some(Token::Comma));
+        assert_eq!(tokens.next(), Some(Token::Number(1000.0)));
+        assert_eq!(tokens.next(), None);
     }
 
     #[test]
     fn comments() {
         let input = "// this is a comment\n/// this is another\n42 3.14";
-        let mut tokenizer = Tokenizer::new(input);
-        assert_eq!(tokenizer.next(), Some(Token::Number(42.0)));
-        assert_eq!(tokenizer.next(), Some(Token::Number(3.14)));
-        assert_eq!(tokenizer.next(), None);
+        let mut tokens = TokenStream::new(input);
+        assert_eq!(tokens.next(), Some(Token::Number(42.0)));
+        assert_eq!(tokens.next(), Some(Token::Number(3.14)));
+        assert_eq!(tokens.next(), None);
     }
 }

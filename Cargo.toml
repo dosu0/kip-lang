@@ -1,8 +1,12 @@
 [package]
-name = "toy-lang"
+name = "kip" # maybe kip-lang
 version = "0.1.0"
 edition = "2018"
+authors = ["Phoenix"]
+description = "Just another programming language"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+atty = "0.2.14"
+lazy_static = "1.4.0"

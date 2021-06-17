@@ -1,0 +1,11 @@
+/* 
+ * test.kip - contains all kip features
+ * ...
+ */
+
+// main function
+func main() {
+    var x = 4;
+		var y = 8;
+		var sum = x + y;
+}

@@ -1,11 +1,23 @@
+@impt "Result"
+
 /* 
  * test.kip - contains all kip features
  * ...
  */
 
+func add(n0: s32, n1: s32): s32 {
+    ret n0 + n1;
+}
+
 // main function
-func main() {
+// TODO: ...
+func main(): Result {
     var x = 4;
-		var y = 8;
-		var sum = x + y;
+    var y = 8;
+    var sum = add(x, y);
+    var str = "sum: ";
+    print(str);
+    print(sum);
+
+    ret Ok;
 }

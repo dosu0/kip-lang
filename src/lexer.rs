@@ -1,18 +1,27 @@
-///! A lexer; the important code is contained in the `TokenStream` struct
+///! The kip lexer
 use std::fmt;
 use std::str::Chars;
 pub use Token::*;
 
+use crate::ast::BinOp;
+
 #[derive(Debug, PartialEq, PartialOrd, Clone)]
 pub enum Token {
-    // keywords
+    // key / reserved words
     Func,
     Extern,
     Var,
+    If,
+    Else,
+    Ret,
+    Impt,
+    Expt,
 
     // primary
     Ident(String),
-    Number(f64),
+    /// TODO: add back float support, I removed it for easier code generation
+    Number(i64),
+    Str(String),
 
     // symbols
     /// `(`
@@ -25,31 +34,91 @@ pub enum Token {
     CloseBrace,
     /// `,`
     Comma,
+    /// `:`
+    Colon,
     /// `;`
     Semicolon,
 
-    // misc
-    Op(char),
+    // operators
+    /// `+`
+    Plus,
+    /// `-`
+    Minus,
+    /// `/`
+    Slash,
+    /// `*`
+    Star,
+    /// `=`
+    Equal,
+    /// `:=` maybe not?
+    /// Assign,
+    /// `%`
+    Percent,
+    /// `>`
+    Gt,
+    /// `>=`
+    Ge,
+    /// `<`
+    Lt,
+    /// `<=`
+    Le,
+    /// '.'
+    Dot,
     Unknown(char),
     Eof,
 }
 
+impl Token {
+    // convert lexical token to its corresponding binary operator
+    pub fn to_bin_op(&self) -> Option<BinOp> {
+        match self {
+            Plus => Some(BinOp::Add),
+            Minus => Some(BinOp::Sub),
+            Slash => Some(BinOp::Div),
+            Star => Some(BinOp::Mul),
+            Equal => Some(BinOp::Eq),
+            Percent => Some(BinOp::Mod),
+            Gt => Some(BinOp::Gt),
+            Ge => Some(BinOp::Ge),
+            Lt => Some(BinOp::Lt),
+            Le => Some(BinOp::Le),
+            _ => None,
+        }
+    }
+}
 impl fmt::Display for Token {
-    /// TODO: refactor?
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Func => "func".fmt(f),
             Extern => "extern".fmt(f),
             Var => "var".fmt(f),
+            Ret => "return".fmt(f),
+            If => "if".fmt(f),
+            Else => "else".fmt(f),
+            Impt => "@impt".fmt(f),
+            Expt => "@expt".fmt(f),
             Ident(s) => s.fmt(f),
             Number(v) => v.fmt(f),
+            Str(s) => write!(f, "\"{}\"", s.escape_debug()),
             OpenParen => ')'.fmt(f),
             CloseParen => '('.fmt(f),
             OpenBrace => '{'.fmt(f),
             CloseBrace => '}'.fmt(f),
+            Colon => ':'.fmt(f),
             Comma => ','.fmt(f),
             Semicolon => ';'.fmt(f),
-            Op(ch) => ch.fmt(f),
+            Plus => '+'.fmt(f),
+            Minus => '-'.fmt(f),
+            Star => '*'.fmt(f),
+            Slash => '/'.fmt(f),
+            Dot => '.'.fmt(f),
+            // Assign => ":=".fmt(f),
+            Percent => "%".fmt(f),
+            Gt => '>'.fmt(f),
+            Ge => ">=".fmt(f),
+            Lt => "<".fmt(f),
+            Le => "<=".fmt(f),
+            Equal => '='.fmt(f),
             Unknown(ch) => ch.fmt(f),
             Eof => "end of file".fmt(f),
         }
@@ -68,10 +137,7 @@ fn is_id_start(ch: char) -> bool {
 }
 
 fn is_id_cont(ch: char) -> bool {
-    ('a'..='z').contains(&ch)
-        || ('A'..='Z').contains(&ch)
-        || ('0'..='9').contains(&ch)
-        || ch == '_'
+    ('a'..='z').contains(&ch) || ('A'..='Z').contains(&ch) || ('0'..='9').contains(&ch) || ch == '_'
 }
 
 impl<'a> TokenStream<'a> {
@@ -90,10 +156,10 @@ impl<'a> TokenStream<'a> {
         };
 
         match fst_ch {
-            // Line Comments ('//')
-            '/' => {
-                if self.peek_ch() == '/' {
-                    self.bump();
+            '/' => match self.peek_ch() {
+                // Line Comments ('//')
+                '/' => {
+                    self.bump().unwrap();
 
                     let mut ch = self.peek_ch();
 
@@ -103,11 +169,27 @@ impl<'a> TokenStream<'a> {
                     }
 
                     self.eat()
-                } else {
-                    Token::Op('/')
                 }
-            }
 
+                // block comment
+                '*' => {
+                    self.bump().unwrap();
+
+                    loop {
+                        if let Some(ch) = self.bump() {
+                            if ch == '*' && self.peek_ch() == '/' {
+                                self.bump().unwrap();
+                                break;
+                            }
+                        } else {
+                            // TODO: better error handling :|
+                            panic!("unterminated block comment");
+                        }
+                    }
+                    self.eat()
+                }
+                _ => Token::Slash,
+            },
             // Skip whitespace
             ch if ch.is_ascii_whitespace() => {
                 while self.peek_ch().is_ascii_whitespace() {
@@ -119,7 +201,7 @@ impl<'a> TokenStream<'a> {
 
             // Identifiers and reserved words
             ch if is_id_start(ch) => {
-                let mut s = String::from(ch);
+                let mut s = ch.to_string();
                 while is_id_cont(self.peek_ch()) {
                     s.push(self.bump().unwrap());
                 }
@@ -128,13 +210,16 @@ impl<'a> TokenStream<'a> {
                     "func" => Func,
                     "extern" => Extern,
                     "var" => Var,
+                    "if" => If,
+                    "else" => Else,
+                    "ret" => Ret,
                     s => Ident(s.to_owned()),
                 }
             }
 
             // Number Literals
             ch @ '0'..='9' => {
-                let mut s = String::from(ch);
+                let mut s = ch.to_string();
 
                 while self.peek_ch().is_ascii_digit() {
                     s.push(self.bump().unwrap());
@@ -142,23 +227,67 @@ impl<'a> TokenStream<'a> {
 
                 // Handle decimal points
                 if self.peek_ch() == '.' {
-                    s.push(self.bump().unwrap());
+                    // TODO: add back float support, I removed it for easier code generation
+                    todo!("floating-point numbers");
+
+                    /* s.push(self.bump().unwrap());
                     while self.peek_ch().is_ascii_digit() {
                         s.push(self.bump().unwrap());
-                    }
+                    } */
                 }
 
                 // TODO: Add error handling
                 Number(s.parse().unwrap())
             }
 
+            // string literal e.g. (`"foo"`)
+            '"' => {
+                let mut s = String::new();
+
+                while self.peek_ch() != '"' {
+                    s.push(self.bump().unwrap_or_else(|| {
+                        // TODO: improved error handling
+                        panic!("unterminated string literal");
+                    }));
+                }
+
+                self.bump();
+
+                Str(s)
+            }
+
+            '@' => {
+                let ch = self.bump().expect("expected identifier after `@`");
+                if is_id_start(ch) {
+                    let mut s = ch.to_string();
+                    while is_id_cont(self.peek_ch()) {
+                        s.push(self.bump().unwrap());
+                    }
+
+                    match &*s {
+                        "impt" => Impt,
+                        "expt" => Expt,
+                        s => panic!("unknown preproc directive `@{}`", s),
+                    }
+                } else {
+                    panic!("expected identifier after `@`");
+                }
+            }
             '(' => OpenParen,
             ')' => CloseParen,
             '{' => OpenBrace,
             '}' => CloseBrace,
             ',' => Comma,
             ';' => Semicolon,
-            ch @ ('>' | '<' | '+' | '-' | '*' | '=') => Op(ch),
+            '>' => Gt,
+            '<' => Lt,
+            '+' => Plus,
+            '-' => Minus,
+            '*' => Star,
+            ':' => Colon,
+            '%' => Percent,
+            '=' => Equal,
+            '.' => Dot,
             ch => Unknown(ch),
         }
     }
@@ -204,7 +333,7 @@ impl<'a> Iterator for TokenStream<'a> {
 
     fn next(&mut self) -> Option<Self::Item> {
         match self.eat() {
-            Token::Eof => None,
+            Eof => None,
             t => Some(t),
         }
     }
@@ -218,38 +347,44 @@ mod tests {
     fn identifiers_and_parens() {
         let input = "func foo()";
         let mut tokens = TokenStream::new(input);
-        assert_eq!(tokens.next(), Some(Token::Func));
+        assert_eq!(tokens.eat(), Func);
         // Should skip whitespace...
-        assert_eq!(tokens.next(), Some(Token::Ident(String::from("foo"))));
-        assert_eq!(tokens.next(), Some(Token::OpenParen));
-        assert_eq!(tokens.next(), Some(Token::CloseParen));
+        assert_eq!(tokens.eat(), Ident("foo".into()));
+        assert_eq!(tokens.eat(), OpenParen);
+        assert_eq!(tokens.eat(), CloseParen);
         // Should return None when done lexing...
-        assert_eq!(tokens.next(), None);
-        assert_eq!(tokens.next(), None);
+        assert_eq!(tokens.eat(), Eof);
+        assert_eq!(tokens.eat(), Eof);
     }
 
     #[test]
     fn numbers_ops_and_commas() {
-        let input = "42 + 3.14, 69 * 100, 1000";
+        let input = "42 + 3, 69 * 100, 1000";
         let mut tokens = TokenStream::new(input);
-        assert_eq!(tokens.next(), Some(Token::Number(42.0)));
-        assert_eq!(tokens.next(), Some(Token::Op('+')));
-        assert_eq!(tokens.next(), Some(Token::Number(3.14)));
-        assert_eq!(tokens.next(), Some(Token::Comma));
-        assert_eq!(tokens.next(), Some(Token::Number(69.0)));
-        assert_eq!(tokens.next(), Some(Token::Op('*')));
-        assert_eq!(tokens.next(), Some(Token::Number(100.0)));
-        assert_eq!(tokens.next(), Some(Token::Comma));
-        assert_eq!(tokens.next(), Some(Token::Number(1000.0)));
-        assert_eq!(tokens.next(), None);
+        assert_eq!(tokens.eat(), Number(42));
+        assert_eq!(tokens.eat(), Plus);
+        assert_eq!(tokens.eat(), Number(3));
+        assert_eq!(tokens.eat(), Comma);
+        assert_eq!(tokens.eat(), Number(69));
+        assert_eq!(tokens.eat(), Star);
+        assert_eq!(tokens.eat(), Number(100));
+        assert_eq!(tokens.eat(), Comma);
+        assert_eq!(tokens.eat(), Number(1000));
+        assert_eq!(tokens.eat(), Eof);
     }
 
     #[test]
     fn comments() {
-        let input = "// this is a comment\n/// this is another\n42 3.14";
+        let input = concat!(
+            "// this is a line comment\n foo\n",
+            "/**\n * this is a block comment\n */\n bar\n",
+            "// another line comment\n baz",
+        );
+
         let mut tokens = TokenStream::new(input);
-        assert_eq!(tokens.next(), Some(Token::Number(42.0)));
-        assert_eq!(tokens.next(), Some(Token::Number(3.14)));
-        assert_eq!(tokens.next(), None);
+        assert_eq!(tokens.eat(), Ident("foo".into()));
+        assert_eq!(tokens.eat(), Ident("bar".into()));
+        assert_eq!(tokens.eat(), Ident("baz".into()));
+        assert_eq!(tokens.eat(), Eof);
     }
 }

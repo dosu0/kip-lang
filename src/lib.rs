@@ -1,9 +1,9 @@
 pub mod ast;
 // pub mod codegen;
 pub mod driver;
-pub mod lexer;
+mod lexer;
 pub mod logger;
-pub mod parser;
+mod parser;
 mod source;
-pub mod symbol;
-pub mod typechk;
+mod symbol;
+mod typechk;

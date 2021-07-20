@@ -1,10 +1,16 @@
-use kip::driver::main_loop;
+use kip::{driver, logger};
+use log::info;
+use std::env;
+use std::error::Error;
 
-fn main() {
-    let version = env!("CARGO_PKG_VERSION");
-    println!("kip v{}", version);
+fn main() -> Result<(), Box<dyn Error>> {
+    logger::init()?;
+    info!(target: "compiler_info", "kip version {version} (kip v{version})", version = env!("CARGO_PKG_VERSION"));
 
-    if let Err(e) = main_loop() {
-        eprintln!("[kip::driver] error: {}", e);
-    };
+    let mut args = env::args();
+    args.next();
+
+    driver::run(args)?;
+
+    Ok(())
 }

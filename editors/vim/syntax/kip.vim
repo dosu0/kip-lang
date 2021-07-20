@@ -29,7 +29,7 @@ syntax match kipOperator /</
 
 syntax match kipFunction /\<\h\w*\>(/he=e-1,me=e-1
 " type annotations
-syntax match kipType ": \<\h\w*\>"hs=s+2
+syntax region kipType start=/:\s*/ end=/\<\h\w*\>/
 syntax region kipString start=/"/ end=/"/
 
 syntax keyword kipTodo TODO contained

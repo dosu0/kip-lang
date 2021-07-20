@@ -1,5 +1,5 @@
 use super::{ParseResult, Parser};
-use crate::ast::{Expr, LitKind};
+use crate::ast::{Expr, ExprKind, LitKind, Region};
 use crate::lexer::Token;
 
 impl<'a> Parser<'a> {
@@ -15,8 +15,9 @@ impl<'a> Parser<'a> {
     }
 
     /// ident_expr -> ident | call_expr
-    fn parse_ident_expr(&mut self, ident_name: &str) -> ParseResult<Box<Expr>> {
-        if self.peek() == Token::OpenParen {
+    fn parse_ident_expr(&mut self, ident_name: String) -> ParseResult<Box<Expr>> {
+        let start = self.tokens.offset();
+        let kind = if self.peek() == Token::OpenParen {
             self.eat();
             // function call
             let mut args = Vec::new();
@@ -33,10 +34,18 @@ impl<'a> Parser<'a> {
                 }
             }
 
-            Ok(Box::new(Expr::Call(ident_name.to_owned(), args)))
+            ExprKind::Call(ident_name, args)
         } else {
-            Ok(Box::new(Expr::Var(ident_name.to_owned())))
-        }
+            ExprKind::Var(ident_name)
+        };
+
+        Ok(Box::new(Expr {
+            kind,
+            region: Region {
+                start,
+                end: self.tokens.offset(),
+            },
+        }))
     }
 
     pub(super) fn parse_expr(&mut self) -> ParseResult<Box<Expr>> {
@@ -45,13 +54,28 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_primary(&mut self) -> ParseResult<Box<Expr>> {
-        use Expr::Lit;
+        use ExprKind::Lit;
         use LitKind::*;
 
+        let start = self.tokens.offset();
         match self.eat() {
-            Token::Ident(name) => self.parse_ident_expr(&name),
-            Token::Number(val) => Ok(Box::new(Lit(Int(val)))),
-            Token::Str(val) => Ok(Box::new(Lit(Str(val)))),
+            Token::Ident(name) => self.parse_ident_expr(name),
+            Token::Number(val) => {
+                let kind = Lit(Int(val));
+                let region = Region {
+                    start,
+                    end: self.tokens.offset(),
+                };
+                Ok(Box::new(Expr { kind, region }))
+            }
+            Token::Str(val) => {
+                let kind = Lit(Str(val));
+                let region = Region {
+                    start,
+                    end: self.tokens.offset(),
+                };
+                Ok(Box::new(Expr { kind, region }))
+            }
             Token::OpenParen => self.parse_paren_expr(),
             tok => {
                 Err(self.syntax_error(&format!("expected an expression, instead found `{}`", tok)))
@@ -60,6 +84,8 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_bin_op_rhs(&mut self, expr_prec: u32, mut lhs: Box<Expr>) -> ParseResult<Box<Expr>> {
+        use ExprKind::Binary;
+
         loop {
             let bin_op = match self.peek().to_bin_op() {
                 Some(o) => o,
@@ -86,7 +112,14 @@ impl<'a> Parser<'a> {
                 None => rhs = self.parse_bin_op_rhs(tok_prec + 1, rhs)?,
             }
 
-            lhs = Box::new(Expr::Binary(bin_op, lhs, rhs));
+            let start = lhs.region.start;
+            lhs = Box::new(Expr {
+                kind: Binary(bin_op, lhs, rhs),
+                region: Region {
+                    start,
+                    end: self.tokens.offset(),
+                },
+            });
         }
     }
 }

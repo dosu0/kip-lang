@@ -4,6 +4,7 @@ use std::str::Chars;
 pub use Token::*;
 
 use crate::ast::BinOp;
+use crate::source::Source;
 
 #[derive(Debug, PartialEq, PartialOrd, Clone)]
 pub enum Token {
@@ -127,9 +128,12 @@ impl fmt::Display for Token {
 
 #[derive(Debug, Clone)]
 pub struct TokenStream<'a> {
+    input: &'a Source,
     chars: Chars<'a>,
     line: usize,
     col: usize,
+    /// offset
+    offset: usize,
 }
 
 fn is_id_start(ch: char) -> bool {
@@ -141,9 +145,11 @@ fn is_id_cont(ch: char) -> bool {
 }
 
 impl<'a> TokenStream<'a> {
-    pub fn new(input: &'a str) -> Self {
+    pub fn new(input: &'a Source) -> Self {
         Self {
-            chars: input.chars(),
+            input,
+            chars: input.contents.chars(),
+            offset: 0,
             line: 1,
             col: 0,
         }
@@ -311,6 +317,11 @@ impl<'a> TokenStream<'a> {
         self.col
     }
 
+    /// retreive character offset
+    pub fn offset(&self) -> usize {
+        self.offset
+    }
+
     /// Move to the next character
     fn bump(&mut self) -> Option<char> {
         let ch = self.chars.next();
@@ -320,11 +331,19 @@ impl<'a> TokenStream<'a> {
                 self.line += 1;
                 self.col = 0;
             }
-            Some(_) => self.col += 1,
+            Some(_) => {
+                self.col += 1;
+                self.offset += 1;
+            }
             _ => {}
         }
 
         ch
+    }
+
+    /// Get a reference to the token stream's input.
+    pub fn input(&self) -> &Source {
+        self.input
     }
 }
 
@@ -346,7 +365,8 @@ mod tests {
     #[test]
     fn identifiers_and_parens() {
         let input = "func foo()";
-        let mut tokens = TokenStream::new(input);
+        let source = Source::new(input, "string literal");
+        let mut tokens = TokenStream::new(&source);
         assert_eq!(tokens.eat(), Func);
         // Should skip whitespace...
         assert_eq!(tokens.eat(), Ident("foo".into()));
@@ -360,7 +380,8 @@ mod tests {
     #[test]
     fn numbers_ops_and_commas() {
         let input = "42 + 3, 69 * 100, 1000";
-        let mut tokens = TokenStream::new(input);
+        let source = Source::new(input, "string literal");
+        let mut tokens = TokenStream::new(&source);
         assert_eq!(tokens.eat(), Number(42));
         assert_eq!(tokens.eat(), Plus);
         assert_eq!(tokens.eat(), Number(3));
@@ -381,7 +402,8 @@ mod tests {
             "// another line comment\n baz",
         );
 
-        let mut tokens = TokenStream::new(input);
+        let source = Source::new(input, "string literal");
+        let mut tokens = TokenStream::new(&source);
         assert_eq!(tokens.eat(), Ident("foo".into()));
         assert_eq!(tokens.eat(), Ident("bar".into()));
         assert_eq!(tokens.eat(), Ident("baz".into()));

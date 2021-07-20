@@ -8,8 +8,9 @@ use std::io::{self, Read};
 use atty::Stream;
 use log::error;
 
+use crate::lexer::TokenStream;
 use crate::parser::Parser;
-use crate::{lexer::TokenStream, source::Source};
+use crate::source::Source;
 
 pub fn run(mut args: Args) -> Result<(), Box<dyn Error>> {
     let mut source = Source {

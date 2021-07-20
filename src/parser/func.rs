@@ -1,14 +1,12 @@
 use crate::{
-    ast::{FuncDef, FuncProto, Param, Type},
+    ast::{FuncDef, FuncProto, Param, Region, Type},
     lexer::Token,
 };
 
-use super::{ParseResult, Parser, TypeError};
+use super::{ParseResult, Parser};
 
 impl<'a> Parser<'a> {
     fn parse_proto(&mut self) -> ParseResult<Box<FuncProto>> {
-        use TypeError::Unknown;
-
         let name = match self.eat() {
             Token::Ident(name) => name,
             _ => return Err(self.syntax_error("expected function name in function prototype")),
@@ -16,22 +14,9 @@ impl<'a> Parser<'a> {
 
         if self.eat() == Token::OpenParen {
             let params = self.parse_param_list()?;
-            let ret = if self.peek() == Token::Colon {
+            let ret = if let Token::Colon = self.peek() {
                 self.eat();
-                if let Token::Ident(name) = self.eat() {
-                    match &*name {
-                        "s32" => Type::Int,
-                        "s64" => Type::Int,
-                        "u32" => Type::Int,
-                        "u64" => Type::Int,
-                        s if self.sym_tbl.contains(s) => Type::Other(name),
-                        _ => return Err(self.type_error(Unknown)),
-                    }
-                } else {
-                    return Err(
-                        self.syntax_error("expected type name after `:` in function prototype")
-                    );
-                }
+                self.parse_type_annotation()?
             } else {
                 Type::Void
             };
@@ -44,23 +29,11 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_param_list(&mut self) -> ParseResult<Vec<Param>> {
-        use TypeError::Unknown;
         let mut params = Vec::new();
 
         while let Token::Ident(name) = self.eat() {
             if let Token::Colon = self.eat() {
-                let ty = if let Token::Ident(name) = self.eat() {
-                    match &*name {
-                        "s32" => Type::Int,
-                        "s64" => Type::Int,
-                        "u32" => Type::Int,
-                        "u64" => Type::Int,
-                        _ => return Err(self.type_error(Unknown)),
-                    }
-                } else {
-                    return Err(self.syntax_error("expected type name in type annotation"));
-                };
-
+                let ty = self.parse_type_annotation()?;
                 params.push(Param { name, ty });
 
                 match self.eat() {
@@ -88,7 +61,11 @@ impl<'a> Parser<'a> {
         self.parse_proto()
     }
 
-    pub(super) fn parse_func(&mut self) -> ParseResult<Box<FuncDef>> {
+    pub fn parse_func(&mut self) -> ParseResult<Box<FuncDef>> {
+        let mut region = Region {
+            start: self.tokens.offset(),
+            end: 0,
+        };
         let proto = self.parse_proto()?;
 
         if self.eat() != Token::OpenBrace {
@@ -103,27 +80,32 @@ impl<'a> Parser<'a> {
         }
 
         self.eat();
-
-        Ok(Box::new(FuncDef { proto, body }))
+        region.end = self.tokens.offset();
+        Ok(Box::new(FuncDef {
+            proto,
+            body,
+            region,
+        }))
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::ast::{BinOp, Expr::*, Stmt::*};
+    use crate::ast::{BinOp, ExprKind::*, StmtKind::*};
     use crate::lexer::TokenStream;
+    use crate::source::Source;
 
     use super::*;
 
     #[test]
     fn parse_func_def() {
         let input = "\
-        func add(x: s32, y: s32) {\n\
-            var sum = x + y;\n\
-            ret sum;\n\
+        func add(x: s32, y: s32): s32 {\n\
+            ret x + y;\n\
         }";
 
-        let mut tokens = TokenStream::new(input);
+        let source = Source::new(input, "<string literal>");
+        let mut tokens = TokenStream::new(&source);
         assert_eq!(tokens.eat(), Token::Func);
 
         let mut parser = Parser::new(tokens);
@@ -135,22 +117,33 @@ mod tests {
         assert_eq!(func.proto.params[0].ty, Type::Int);
         assert_eq!(&*func.proto.params[1].name, "y");
         assert_eq!(func.proto.params[1].ty, Type::Int);
-        assert_eq!(func.proto.ret, Type::Void);
+        assert_eq!(func.proto.ret, Type::Int);
 
-        let binary_expr = Box::new(Binary(
-            BinOp::Add,
-            Box::new(Var("x".to_owned())),
-            Box::new(Var("y".to_owned())),
-        ));
-        assert_eq!(*func.body[0], VarDef("sum".to_owned(), binary_expr));
-        assert_eq!(*func.body[1], Ret(Box::new(Var("sum".to_owned()))));
+        if let Ret(expr) = &func.body[0].kind {
+            if let Binary(op, lhs, rhs) = &expr.kind {
+                assert_eq!(*op, BinOp::Add);
+                if let Var(name) = &lhs.kind {
+                    assert_eq!(name, "x");
+                } else {
+                    panic!("expected a variable reference");
+                }
+
+                if let Var(name) = &rhs.kind {
+                    assert_eq!(name, "y");
+                } else {
+                    panic!("expected a variable reference");
+                }
+            }
+        } else {
+            panic!("expected a return statement");
+        }
     }
 
     #[test]
     fn parse_extern() {
         let input = "extern func raise(sig: s32): s32;";
-
-        let mut tokens = TokenStream::new(input);
+        let source = Source::new(input, "<string literal>");
+        let mut tokens = TokenStream::new(&source);
         assert_eq!(tokens.eat(), Token::Extern);
 
         let mut parser = Parser::new(tokens);

@@ -1,9 +1,9 @@
 //! Abstract Syntax Tree (AST) nodes
 
 /// expression (expr)
-/// expr -> number | var | binary | call | var_def
-#[derive(Debug, PartialEq)]
-pub enum Expr {
+/// expr -> number | var | binary | call | var
+#[derive(Debug)]
+pub enum ExprKind {
     Lit(LitKind),
     /// A variable reference expression, e.g. (`foo`)
     Var(String),
@@ -16,6 +16,12 @@ pub enum Expr {
     /// an if-else statement
     /// cond_expr -> `if` expr block | `if` expr block `else` block
     Cond(Box<Expr>, Vec<Stmt>, Option<Vec<Stmt>>),
+}
+
+#[derive(Debug)]
+pub struct Expr {
+    pub kind: ExprKind,
+    pub region: Region,
 }
 
 /// A region of a source file
@@ -98,13 +104,19 @@ impl BinOp {
 
 /// statement (stmt)
 /// stmt -> expr | var_def `;`
-#[derive(Debug, PartialEq)]
-pub enum Stmt {
+#[derive(Debug)]
+pub enum StmtKind {
     Expr(Expr),
     /// var_def_stmt -> `var` ident `=` expr `;`
     VarDef(String, Box<Expr>),
     /// ret_stmt -> `ret` expr `;`
     Ret(Box<Expr>),
+}
+
+#[derive(Debug)]
+pub struct Stmt {
+    pub kind: StmtKind,
+    pub region: Region,
 }
 
 /// A function prototype.
@@ -116,7 +128,7 @@ pub struct FuncProto {
     pub ret: Type,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Param {
     pub name: String,
     // type is a reserved word in rust :(
@@ -124,11 +136,12 @@ pub struct Param {
 }
 
 #[non_exhaustive]
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Type {
     // Builtins:
     /// signed and unsigned integers
     Int,
+    Str,
     /// the default return type of a function
     Void,
 
@@ -136,33 +149,54 @@ pub enum Type {
     Other(String),
 }
 
+enum Item {
+    Func(FuncDef),
+}
+
+struct Module {
+    items: Vec<Box<Item>>
+}
+
 /// A function definition
 /// Captures the function's prototype and its body
 /// func_def -> func_proto block
-#[derive(Debug, PartialEq)]
+#[derive(Debug)]
 pub struct FuncDef {
     pub proto: Box<FuncProto>,
     pub body: Vec<Box<Stmt>>,
+    pub region: Region,
 }
+
 pub mod visit {
     use super::*;
 
     pub trait Visitor<T> {
         fn visit_expr(&mut self, e: &Expr) -> T;
         fn visit_stmt(&mut self, s: &Stmt) -> T;
+        fn visit_func(&mut self, f: &FuncDef) -> T;
     }
 
     pub fn walk_expr<T>(v: &mut impl Visitor<T>, e: &Expr) {
-        use Expr::*;
-        match *e {
+        use ExprKind::*;
+        match e.kind {
             // deadends
-            Lit(_) => {},
-            Var(_) => {},
+            Lit(_) => {}
+            Var(_) => {}
 
             // expressions that may recurse
-            Binary(_, _, _) => todo!(),
-            Call(_, _) => todo!(),
+            Binary(_, _, _) => {
+                v.visit_expr(e);
+            }
+            Call(_, _) => {
+                v.visit_expr(e);
+            }
             Cond(_, _, _) => todo!(),
+        }
+    }
+
+    pub fn walk_func<T>(v: &mut impl Visitor<T>, f: &FuncDef) {
+        for stmt in &f.body {
+            v.visit_stmt(stmt);
         }
     }
 }

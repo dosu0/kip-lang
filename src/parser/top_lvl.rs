@@ -1,17 +1,25 @@
-use crate::ast::FuncDef;
+use log::error;
+
+use crate::ast::visit::walk_func;
 use crate::lexer::Token;
 use crate::parser::Parser;
+use crate::typechk::TypeChecker;
 
 impl<'a> Parser<'a> {
     fn handle_func(&mut self) {
-        match self.parse_func() {
-            Ok(func) => {
-                eprintln!("parsed a function definition: {:#?}", func);
+        if let Ok(func) = self.parse_func() {
+            // trace!("parsed a function definition: {:#?}", func);
+            let mut typechk = TypeChecker::new(self.input(), &self.sym_tbl);
+            walk_func(&mut typechk, &func);
+            for err in typechk.errors() {
+                err.display().unwrap();
             }
-            Err(e) => {
-                eprintln!("[kip::parser] error: {} ({:?})", e, self.errors);
-                self.eat();
+        } else {
+            for err in &self.errors {
+                error!(target: "parser", "{}", err);
             }
+
+            self.eat();
         }
     }
 
@@ -19,28 +27,24 @@ impl<'a> Parser<'a> {
         match self.parse_extern() {
             Ok(proto) => eprintln!("parsed an extern statement: {:#?}", proto),
             Err(e) => {
-                eprintln!("[kip::parser] error: {}", e);
+                error!(target: "parser", "{}", e);
                 self.eat();
             }
         }
     }
 
     fn handle_top_lvl_expr(&mut self) {
-        match self.parse_top_lvl_expr().as_deref() {
-            Ok(FuncDef { body: expr, .. }) => {
-                eprintln!("parsed a top level expression: {:#?}", expr)
+        if let Err(_) = self.parse_top_lvl_expr().as_deref() {
+            for err in &self.errors {
+                error!(target: "parser", "{}", err);
             }
-            Err(e) => {
-                eprintln!("[kip::parser] error: {}", e);
-                self.eat();
-            }
+            self.eat();
         }
     }
 
     fn handle_impt_stmt(&mut self) {
-        match self.parse_impt_stmt() {
-            Ok(path) => eprintln!("parsed an `@impt` statement: imported {}", path),
-            Err(e) => eprintln!("[kip::parser] error: {}", e),
+        if let Err(e) = self.parse_impt_stmt() {
+            error!(target: "parser", "{}", e);
         }
     }
     pub fn parse(&mut self) {

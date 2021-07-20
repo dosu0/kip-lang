@@ -365,7 +365,7 @@ mod tests {
     #[test]
     fn identifiers_and_parens() {
         let input = "func foo()";
-        let source = Source::new(input, "string literal");
+        let source = Source::new(input, "<string literal>");
         let mut tokens = TokenStream::new(&source);
         assert_eq!(tokens.eat(), Func);
         // Should skip whitespace...
@@ -380,7 +380,7 @@ mod tests {
     #[test]
     fn numbers_ops_and_commas() {
         let input = "42 + 3, 69 * 100, 1000";
-        let source = Source::new(input, "string literal");
+        let source = Source::new(input, "<string literal>");
         let mut tokens = TokenStream::new(&source);
         assert_eq!(tokens.eat(), Number(42));
         assert_eq!(tokens.eat(), Plus);
@@ -402,7 +402,7 @@ mod tests {
             "// another line comment\n baz",
         );
 
-        let source = Source::new(input, "string literal");
+        let source = Source::new(input, "<string literal>");
         let mut tokens = TokenStream::new(&source);
         assert_eq!(tokens.eat(), Ident("foo".into()));
         assert_eq!(tokens.eat(), Ident("bar".into()));

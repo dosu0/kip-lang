@@ -101,7 +101,7 @@ pub enum Stmt {
 }
 
 /// A function prototype.
-/// Captures the function's names its parameters
+/// Captures the function's name and its parameters
 #[derive(Debug, PartialEq)]
 pub struct FuncProto {
     pub name: String,

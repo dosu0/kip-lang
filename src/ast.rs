@@ -18,6 +18,13 @@ pub enum Expr {
     Cond(Box<Expr>, Vec<Stmt>, Option<Vec<Stmt>>),
 }
 
+/// A region of a source file
+#[derive(Debug, Clone, Copy)]
+pub struct Region {
+    pub start: usize,
+    pub end: usize,
+}
+
 #[derive(Debug, PartialEq)]
 pub enum LitKind {
     Int(i64),

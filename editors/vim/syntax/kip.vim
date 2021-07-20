@@ -2,8 +2,8 @@
 " Language:     Kip
 " Maintainer:   Phoenix
 " Last Change:  2021 Jun 28
-" Remark: None
-"
+" Remark:      None
+
 if exists("b:current_syntax")
     finish
 endif
@@ -12,6 +12,7 @@ syntax case match
 syntax keyword kipKeyword func var ret
 syntax keyword kipType s32 s64 u32 u64
 syntax keyword kipType str
+
 syntax match kipNumber /\<\d\+\>/
 syntax match kipIdentifier /\<\h\w*\>/
 syntax match kipPreProc /@\<\h\w*\>/

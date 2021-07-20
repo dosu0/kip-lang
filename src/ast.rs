@@ -154,7 +154,7 @@ enum Item {
 }
 
 struct Module {
-    items: Vec<Box<Item>>
+    items: Vec<Box<Item>>,
 }
 
 /// A function definition

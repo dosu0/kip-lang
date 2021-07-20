@@ -7,7 +7,8 @@ struct Logger;
 
 pub fn init() -> Result<(), SetLoggerError> {
     log::set_logger(&LOGGER)?;
-    Ok(log::set_max_level(LevelFilter::Info))
+    log::set_max_level(LevelFilter::Info);
+    Ok(())
 }
 
 static LEVEL_NAMES: [&str; 6] = ["off", "error", "warning", "info", "debug", "trace"];

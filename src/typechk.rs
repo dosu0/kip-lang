@@ -157,18 +157,18 @@ impl<'a, 'b> AstVisitor<()> for TypeChecker<'a, 'b> {
                 let params = match self.sym_tbl.get(name) {
                     // screw the borrow checker
                     Some(Func(proto, _)) => proto.params.clone(),
-                    _ => return self.type_error(Undefined, e.region.clone()),
+                    _ => return self.type_error(Undefined, e.region),
                 };
 
                 if args.len() != params.len() {
-                    return self.type_error(InvalidArgs, e.region.clone());
+                    return self.type_error(InvalidArgs, e.region);
                 }
 
                 for (arg, param) in args.iter().zip(params) {
                     self.visit_expr(arg);
                     if let Some(arg_ty) = self.infer_type(arg) {
                         if arg_ty != param.ty {
-                            self.type_error(InvalidArgs, e.region.clone());
+                            self.type_error(InvalidArgs, e.region);
                         }
                     }
                 }
@@ -181,10 +181,10 @@ impl<'a, 'b> AstVisitor<()> for TypeChecker<'a, 'b> {
     fn visit_stmt(&mut self, s: &Stmt) {
         use StmtKind::*;
         match &s.kind {
-            Expr(e) => self.visit_expr(&e),
+            Expr(e) => self.visit_expr(e),
             VarDef(name, init) => {
-                self.visit_expr(&init);
-                if let Some(inferred_ty) = self.infer_type(&init) {
+                self.visit_expr(init);
+                if let Some(inferred_ty) = self.infer_type(init) {
                     if let Some(Symbol::Var(ty)) = self.sym_tbl.get(name) {
                         if *ty != inferred_ty {
                             self.type_error(Mismatch, s.region);
@@ -205,8 +205,8 @@ impl<'a, 'b> AstVisitor<()> for TypeChecker<'a, 'b> {
         for stmt in &f.body {
             match &stmt.kind {
                 Ret(e) => {
-                    self.visit_expr(&e);
-                    if let Some(ty) = self.infer_type(&e) {
+                    self.visit_expr(e);
+                    if let Some(ty) = self.infer_type(e) {
                         if ty != f.proto.ret {
                             self.type_error(RetTyMismatch, f.region);
                         }
@@ -214,7 +214,7 @@ impl<'a, 'b> AstVisitor<()> for TypeChecker<'a, 'b> {
                         self.type_error(CannotInfer, f.region);
                     }
                 }
-                _ => self.visit_stmt(&stmt),
+                _ => self.visit_stmt(stmt),
             }
         }
     }

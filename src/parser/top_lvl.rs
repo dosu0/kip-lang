@@ -34,7 +34,7 @@ impl<'a> Parser<'a> {
     }
 
     fn handle_top_lvl_expr(&mut self) {
-        if let Err(_) = self.parse_top_lvl_expr().as_deref() {
+        if self.parse_top_lvl_expr().is_err() {
             for err in &self.errors {
                 error!(target: "parser", "{}", err);
             }

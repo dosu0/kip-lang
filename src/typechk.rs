@@ -139,6 +139,9 @@ impl<'a, 'b> AstVisitor<()> for TypeChecker<'a, 'b> {
             Binary(op, ref lhs, ref rhs) => {
                 use BinOp::*;
 
+                self.visit_expr(lhs);
+                self.visit_expr(rhs);
+
                 let ty = match (self.infer_type(lhs), self.infer_type(rhs)) {
                     (Some(lty), Some(rty)) if lty == rty => lty,
                     _ => return self.type_error(Mismatch, e.region),

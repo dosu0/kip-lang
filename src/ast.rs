@@ -144,6 +144,7 @@ pub enum Type {
     Str,
     /// the default return type of a function
     Void,
+    Bool,
 
     /// Could be imported or custom
     Other(String),

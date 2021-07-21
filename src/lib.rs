@@ -1,4 +1,4 @@
-pub mod ast;
+mod ast;
 // pub mod codegen;
 pub mod driver;
 mod lexer;

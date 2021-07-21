@@ -326,6 +326,7 @@ impl<'a> TokenStream<'a> {
     fn bump(&mut self) -> Option<char> {
         let ch = self.chars.next();
 
+        self.offset += 1;
         match ch {
             Some('\n') => {
                 self.line += 1;
@@ -333,7 +334,6 @@ impl<'a> TokenStream<'a> {
             }
             Some(_) => {
                 self.col += 1;
-                self.offset += 1;
             }
             _ => {}
         }

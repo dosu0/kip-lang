@@ -59,7 +59,11 @@ impl<'a> Parser<'a> {
 
         let start = self.tokens.offset();
         match self.eat() {
-            Token::Ident(name) => self.parse_ident_expr(name),
+            Token::Ident(name) => {
+                let mut expr = self.parse_ident_expr(name)?;
+                expr.region.start = start;
+                Ok(expr)
+            }
             Token::Number(val) => {
                 let kind = Lit(Int(val));
                 let region = Region {

@@ -24,12 +24,11 @@ impl<'a> Parser<'a> {
     }
 
     fn handle_extern(&mut self) {
-        match self.parse_extern() {
-            Ok(proto) => eprintln!("parsed an extern statement: {:#?}", proto),
-            Err(e) => {
-                error!(target: "parser", "{}", e);
-                self.eat();
+        if self.parse_extern().is_err() {
+            for err in &self.errors {
+                error!(target: "parser", "{}", err);
             }
+            self.eat();
         }
     }
 
@@ -43,8 +42,11 @@ impl<'a> Parser<'a> {
     }
 
     fn handle_impt_stmt(&mut self) {
-        if let Err(e) = self.parse_impt_stmt() {
-            error!(target: "parser", "{}", e);
+        if self.parse_impt_stmt().is_err() {
+            for err in &self.errors {
+                error!(target: "parser", "{}", err);
+            }
+            self.eat();
         }
     }
     pub fn parse(&mut self) {

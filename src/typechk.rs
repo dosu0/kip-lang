@@ -158,8 +158,7 @@ impl<'a, 'b> AstVisitor<()> for TypeChecker<'a, 'b> {
                 use Symbol::*;
 
                 let params = match self.sym_tbl.get(name) {
-                    // screw the borrow checker
-                    Some(Func(proto, _)) => proto.params.clone(),
+                    Some(Func(proto, _)) => &proto.params,
                     _ => return self.type_error(Undefined, e.region),
                 };
 

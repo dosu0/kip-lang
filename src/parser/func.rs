@@ -1,6 +1,9 @@
+use std::collections::HashMap;
+
 use crate::{
     ast::{FuncDef, FuncProto, Param, Region, Type},
     lexer::Token,
+    symbol::Symbol,
 };
 
 use super::{ParseResult, Parser};
@@ -21,7 +24,15 @@ impl<'a> Parser<'a> {
                 Type::Void
             };
 
-            let proto = FuncProto { name, params, ret };
+            let proto = FuncProto {
+                name: name.clone(),
+                params,
+                ret,
+            };
+
+            // TODO: remove clone
+            self.sym_tbl
+                .insert(name, Symbol::Func(proto.clone(), HashMap::new()));
             Ok(Box::new(proto))
         } else {
             Err(self.syntax_error("expected `(` in function prototype"))

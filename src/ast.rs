@@ -121,7 +121,7 @@ pub struct Stmt {
 
 /// A function prototype.
 /// Captures the function's name and its parameters
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct FuncProto {
     pub name: String,
     pub params: Vec<Param>,

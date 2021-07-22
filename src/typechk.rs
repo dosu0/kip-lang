@@ -247,7 +247,7 @@ mod tests {
         let mut parser = Parser::new(tokens);
         let f = parser.parse_func().unwrap();
 
-        let sym_tbl = &parser.sym_tbl();
+        let sym_tbl = parser.sym_tbl();
         let mut typechk = TypeChecker::new(&source, sym_tbl);
         typechk.visit_func(&f);
 

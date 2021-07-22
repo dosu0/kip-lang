@@ -63,10 +63,6 @@ pub struct Parser<'a> {
 impl<'a> Parser<'a> {
     /* fn region_start(&mut self) {}
     fn region_end(&mut self) {} */
-    pub fn sym_tbl(self) -> SymbolTable {
-        self.sym_tbl
-    }
-
     pub fn input(&self) -> &Source {
         self.tokens.input()
     }
@@ -140,6 +136,11 @@ impl<'a> Parser<'a> {
             body,
             region,
         }))
+    }
+
+    /// Get a reference to the parser's symbol table.
+    pub fn sym_tbl(&self) -> &SymbolTable {
+        &self.sym_tbl
     }
 }
 

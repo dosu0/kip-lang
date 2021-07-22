@@ -43,7 +43,8 @@ impl<'a> TypeError<'a> {
 #[derive(Debug, Clone)]
 pub enum TypeErrorKind {
     Unknown,
-    Undefined,
+    UndefinedSymbol,
+    UndefinedFunc,
     InvalidArgs,
     CannotInfer,
     /// type mismatch
@@ -58,7 +59,8 @@ impl fmt::Display for TypeErrorKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Unknown => "unknown type".fmt(f),
-            Undefined => "undefined symbol".fmt(f),
+            UndefinedSymbol => "undefined symbol".fmt(f),
+            UndefinedFunc => "undefined function; hint: try defining or importing it".fmt(f),
             InvalidArgs => "invalid arguments".fmt(f),
             CannotInfer => "cannot infer type".fmt(f),
             Mismatch => "type mismatch".fmt(f),
@@ -133,7 +135,7 @@ impl<'a, 'b> AstVisitor<()> for TypeChecker<'a, 'b> {
 
             Var(ref name) => match self.sym_tbl.get(name) {
                 Some(Symbol::Var(..)) => {}
-                _ => self.type_error(Undefined, e.region),
+                _ => self.type_error(UndefinedSymbol, e.region),
             },
 
             Binary(op, ref lhs, ref rhs) => {
@@ -159,7 +161,7 @@ impl<'a, 'b> AstVisitor<()> for TypeChecker<'a, 'b> {
 
                 let params = match self.sym_tbl.get(name) {
                     Some(Func(proto, _)) => &proto.params,
-                    _ => return self.type_error(Undefined, e.region),
+                    _ => return self.type_error(UndefinedFunc, e.region),
                 };
 
                 if args.len() != params.len() {
@@ -192,7 +194,7 @@ impl<'a, 'b> AstVisitor<()> for TypeChecker<'a, 'b> {
                             self.type_error(Mismatch, s.region);
                         }
                     } else {
-                        self.type_error(Undefined, s.region);
+                        self.type_error(UndefinedSymbol, s.region);
                     }
                 } else {
                     self.type_error(CannotInfer, s.region);

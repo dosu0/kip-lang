@@ -219,7 +219,7 @@ impl<'a> TokenStream<'a> {
                     "if" => If,
                     "else" => Else,
                     "ret" => Ret,
-                    s => Ident(s.to_owned()),
+                    _ => Ident(s),
                 }
             }
 

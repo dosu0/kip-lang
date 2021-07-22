@@ -15,37 +15,24 @@ impl<'a> Parser<'a> {
                 err.display().unwrap();
             }
         } else {
-            for err in &self.errors {
-                error!(target: "parser", "{}", err);
-            }
-
             self.eat();
         }
     }
 
     fn handle_extern(&mut self) {
         if self.parse_extern().is_err() {
-            for err in &self.errors {
-                error!(target: "parser", "{}", err);
-            }
             self.eat();
         }
     }
 
     fn handle_top_lvl_expr(&mut self) {
         if self.parse_top_lvl_expr().is_err() {
-            for err in &self.errors {
-                error!(target: "parser", "{}", err);
-            }
             self.eat();
         }
     }
 
     fn handle_impt_stmt(&mut self) {
         if self.parse_impt_stmt().is_err() {
-            for err in &self.errors {
-                error!(target: "parser", "{}", err);
-            }
             self.eat();
         }
     }
@@ -67,6 +54,10 @@ impl<'a> Parser<'a> {
                 }
                 _ => self.handle_top_lvl_expr(),
             }
+        }
+
+        for err in &self.errors {
+            error!(target: "parser", "{}", err);
         }
     }
 }

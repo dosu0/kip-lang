@@ -285,8 +285,14 @@ impl<'a> TokenStream<'a> {
             '}' => CloseBrace,
             ',' => Comma,
             ';' => Semicolon,
-            '>' => Gt,
-            '<' => Lt,
+            '>' => match self.peek() {
+                Equal => Ge,
+                _ => Gt,
+            },
+            '<' => match self.peek() {
+                Equal => Le,
+                _ => Lt,
+            },
             '+' => Plus,
             '-' => Minus,
             '*' => Star,

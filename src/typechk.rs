@@ -150,7 +150,7 @@ impl<'a, 'b> AstVisitor<()> for TypeChecker<'a, 'b> {
                 };
 
                 match ty {
-                    Type::Str if *op != Eq => self.type_error(InvalidOp, e.region),
+                    Type::Str if *op != Eq || *op != Ne => self.type_error(InvalidOp, e.region),
                     Type::Other(_) | Type::Void => self.type_error(InvalidOp, e.region),
                     _ => {}
                 }

@@ -1,4 +1,4 @@
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Source {
     pub contents: String,
     /// can either be the file name (`src/foo.kip`) or something like (`<stdin>`)

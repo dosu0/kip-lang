@@ -8,6 +8,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     info!(target: "compiler_info", "kip version {version} (kip v{version})", version = env!("CARGO_PKG_VERSION"));
 
     let mut args = env::args();
+    // skip program name
     args.next();
 
     driver::run(args)?;

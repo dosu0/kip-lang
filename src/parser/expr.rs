@@ -23,7 +23,11 @@ impl<'a> Parser<'a> {
             let mut args = Vec::new();
 
             loop {
-                args.push(self.parse_expr()?);
+                if self.eat() != Token::CloseParen {
+                    args.push(self.parse_expr()?);
+                } else {
+                    break;
+                }
 
                 match self.eat() {
                     // End of argument list

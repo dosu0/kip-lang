@@ -83,7 +83,7 @@ impl<'a> Parser<'a> {
         };
         let proto = self.parse_proto()?;
         let body = self.parse_block()?;
-        self.eat();
+
         region.end = self.tokens.offset();
         Ok(Box::new(FuncDef {
             proto,

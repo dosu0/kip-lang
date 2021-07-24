@@ -16,6 +16,7 @@ impl<'a> Parser<'a> {
 
     /// ident_expr -> ident | call_expr
     fn parse_ident_expr(&mut self, ident_name: String) -> ParseResult<Box<Expr>> {
+        use ExprKind::{Call, Var};
         let start = self.tokens.offset();
         let kind = if self.peek() == Token::OpenParen {
             self.eat();
@@ -23,9 +24,10 @@ impl<'a> Parser<'a> {
             let mut args = Vec::new();
 
             loop {
-                if self.eat() != Token::CloseParen {
+                if self.peek() != Token::CloseParen {
                     args.push(self.parse_expr()?);
                 } else {
+                    self.eat();
                     break;
                 }
 
@@ -38,9 +40,9 @@ impl<'a> Parser<'a> {
                 }
             }
 
-            ExprKind::Call(ident_name, args)
+            Call(ident_name, args)
         } else {
-            ExprKind::Var(ident_name)
+            Var(ident_name)
         };
 
         Ok(Box::new(Expr {
@@ -170,6 +172,25 @@ mod tests {
     use super::*;
 
     #[test]
+    fn call() {
+        let input = "foo(bar, baz)";
+        let source = Source::new(input, "<string literal>");
+        let tokens = TokenStream::new(&source);
+        let mut parser = Parser::new(tokens);
+        let expr = parser.parse_expr().unwrap();
+
+        if let Call(name, args) = expr.kind {
+            assert_eq!(name, "foo");
+            if let Var(name) = &args[0].kind {
+                assert_eq!(name, "bar");
+            }
+            if let Var(name) = &args[1].kind {
+                assert_eq!(name, "baz");
+            }
+        }
+    }
+
+    #[test]
     fn paren_expressions() {
         let input = "(a + b)";
         let source = Source::new(input, "<string literal>");
@@ -201,7 +222,7 @@ mod tests {
         use LitKind::*;
         let input = "\
         if x >= 0 {\n\
-            positive();
+            positive();\n\
         } else {\n\
             negative();\n\
         }";

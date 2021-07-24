@@ -15,7 +15,13 @@ pub enum ExprKind {
     Call(String, Vec<Box<Expr>>),
     /// an if-else statement
     /// cond_expr -> `if` expr block | `if` expr block `else` block
-    Cond(Box<Expr>, Vec<Stmt>, Option<Vec<Stmt>>),
+    Cond(Box<Expr>, Box<Block>, Option<Box<Block>>),
+}
+/// `Block`: found in conditionals, loops, and function definitions
+/// block -> stmt*
+#[derive(Debug)]
+pub struct Block {
+    pub stmts: Vec<Box<Stmt>>,
 }
 
 #[derive(Debug)]
@@ -164,7 +170,7 @@ struct Module {
 #[derive(Debug)]
 pub struct FuncDef {
     pub proto: Box<FuncProto>,
-    pub body: Vec<Box<Stmt>>,
+    pub body: Box<Block>,
     pub region: Region,
 }
 
@@ -196,7 +202,7 @@ pub mod visit {
     }
 
     pub fn walk_func<T>(v: &mut impl Visitor<T>, f: &FuncDef) {
-        for stmt in &f.body {
+        for stmt in &f.body.stmts {
             v.visit_stmt(stmt);
         }
     }

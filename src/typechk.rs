@@ -206,7 +206,7 @@ impl<'a, 'b> AstVisitor<()> for TypeChecker<'a, 'b> {
 
     fn visit_func(&mut self, f: &FuncDef) {
         use StmtKind::Ret;
-        for stmt in &f.body {
+        for stmt in &f.body.stmts {
             match &stmt.kind {
                 Ret(e) => {
                     self.visit_expr(e);

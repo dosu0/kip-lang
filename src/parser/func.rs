@@ -78,18 +78,7 @@ impl<'a> Parser<'a> {
             end: 0,
         };
         let proto = self.parse_proto()?;
-
-        if self.eat() != Token::OpenBrace {
-            return Err(self.syntax_error("expected `{` in function definition"));
-        }
-
-        let mut body = Vec::new();
-
-        while self.peek() != Token::CloseBrace {
-            let stmt = self.parse_stmt()?;
-            body.push(stmt);
-        }
-
+        let body = self.parse_block()?;
         self.eat();
         region.end = self.tokens.offset();
         Ok(Box::new(FuncDef {
@@ -130,7 +119,7 @@ mod tests {
         assert_eq!(func.proto.params[1].ty, Type::Int);
         assert_eq!(func.proto.ret, Type::Int);
 
-        if let Ret(expr) = &func.body[0].kind {
+        if let Ret(expr) = &func.body.stmts[0].kind {
             if let Binary(op, lhs, rhs) = &expr.kind {
                 assert_eq!(*op, BinOp::Add);
                 if let Var(name) = &lhs.kind {

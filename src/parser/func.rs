@@ -48,9 +48,9 @@ impl<'a> Parser<'a> {
                 params.push(Param { name, ty });
 
                 match self.eat() {
-                    // End of argument list
+                    // End of parameter list
                     Token::CloseParen => break,
-                    // More arguments ...
+                    // More parameters ...
                     Token::Comma => continue,
                     _ => return Err(self.syntax_error("expected `,` or `)` in a parameter list")),
                 }

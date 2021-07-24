@@ -10,6 +10,7 @@ endif
 
 syntax case match
 syntax keyword kipKeyword extern func var ret
+syntax keyword kipStatement if else
 syntax keyword kipType s32 s64 u32 u64
 syntax keyword kipType str
 
@@ -43,6 +44,7 @@ highlight def link kipNumber Number
 highlight def link kipTodo Todo
 highlight def link kipString String
 highlight def link kipKeyword Keyword
+highlight def link kipStatement Statement
 highlight def link kipType Type
 highlight def link kipPreProc PreProc
 highlight def link kipIdentifier Identifier

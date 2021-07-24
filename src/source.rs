@@ -6,6 +6,7 @@ pub struct Source {
 }
 
 impl Source {
+    #[cfg(test)]
     pub fn new<T: Into<String>>(contents: T, name: T) -> Self {
         Self {
             contents: contents.into(),
@@ -13,3 +14,4 @@ impl Source {
         }
     }
 }
+

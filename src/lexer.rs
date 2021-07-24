@@ -23,6 +23,7 @@ pub enum Token {
     /// TODO: add back float support, I removed it for easier code generation
     Number(i64),
     Str(String),
+    Char(char),
 
     // symbols
     /// `(`
@@ -122,6 +123,7 @@ impl fmt::Display for Token {
             Equal => '='.fmt(f),
             Unknown(ch) => ch.fmt(f),
             Eof => "end of file".fmt(f),
+            Char(ch) => ch.fmt(f),
         }
     }
 }
@@ -251,15 +253,23 @@ impl<'a> TokenStream<'a> {
                 let mut s = String::new();
 
                 while self.peek_ch() != '"' {
-                    s.push(self.bump().unwrap_or_else(|| {
-                        // TODO: improved error handling
-                        panic!("unterminated string literal");
-                    }));
+                    // TODO: improved error handling
+                    s.push(self.bump().expect("unterminated string literal"));
                 }
 
                 self.bump();
 
                 Str(s)
+            }
+
+            '\'' => {
+                let c = self
+                    .bump()
+                    .expect("expected a character inside a character literal");
+                if self.bump().expect("unterminated character literal") != '\'' {
+                    panic!("unterminated character literal");
+                }
+                Char(c)
             }
 
             '@' => {
@@ -373,7 +383,15 @@ impl<'a> Iterator for TokenStream<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-
+    
+    #[test]
+    fn strings_and_chars() {
+        let input = "\"foo\" '7'";
+        let source = Source::new(input, "<string literal>");
+        let mut tokens = TokenStream::new(&source);
+        assert_eq!(tokens.eat(), Str("foo".into()));
+        assert_eq!(tokens.eat(), Char('7'));
+    }
     #[test]
     fn identifiers_and_parens() {
         let input = "func foo()";

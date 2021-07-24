@@ -41,6 +41,7 @@ pub struct Region {
 pub enum LitKind {
     Int(i64),
     Str(String),
+    Char(char)
 }
 
 /// ordered from highest to lowest precedence
@@ -147,6 +148,7 @@ pub enum Type {
     // Builtins:
     /// signed and unsigned integers
     Int,
+    Char,
     Str,
     /// the default return type of a function
     Void,

@@ -33,6 +33,7 @@ syntax match kipFunction /\<\h\w*\>(/he=e-1,me=e-1
 " type annotations
 syntax region kipType start=/:\s*/ end=/\<\h\w*\>/
 syntax region kipString start=/"/ end=/"/
+syntax region kipString start=/'/ end=/'/
 
 syntax keyword kipTodo TODO FIXME XXX contained
 syntax match kipLineComment /\/\/.*/ contains=kipTodo

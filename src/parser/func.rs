@@ -69,7 +69,11 @@ impl<'a> Parser<'a> {
             return Err(self.syntax_error("expected a function declaration in an extern statement"));
         }
 
-        self.parse_proto()
+        let proto = self.parse_proto()?;
+        if self.eat() != Token::Semicolon {
+            return Err(self.syntax_error("expected `;` after external function declaration"));
+        }
+        Ok(proto)
     }
 
     pub fn parse_func(&mut self) -> ParseResult<Box<FuncDef>> {

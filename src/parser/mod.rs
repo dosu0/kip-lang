@@ -1,12 +1,13 @@
 //! A top-down parser implementation
 
+mod block;
 pub mod expr;
 pub mod func;
 pub mod stmt;
 pub mod top_lvl;
 pub mod ty;
 
-use crate::ast::{FuncDef, FuncProto, Region, Type};
+use crate::ast::{Block, FuncDef, FuncProto, Region, Type};
 use crate::lexer::{Token, TokenStream};
 use crate::source::Source;
 use crate::symbol::SymbolTable;
@@ -41,8 +42,8 @@ impl fmt::Display for ParseError {
             RedefinedSymbol(sym) => write!(f, "{} has already been defined", sym),
             InvalidModPath(path) => write!(f, "cannot find module path \"{}\"", path),
         }?;
-
-        write!(f, " @ line {}, column {}", self.loc.0, self.loc.1)?;
+        let (line, col) = self.loc;
+        write!(f, " @ line {}, column {}", line, col)?;
 
         if let Some(ref hint) = self.hint {
             write!(f, "\nhint: {}", hint)?;
@@ -123,7 +124,9 @@ impl<'a> Parser<'a> {
             start: self.tokens.offset(),
             end: 0,
         };
-        let body = vec![self.parse_stmt()?];
+        let body = Box::new(Block {
+            stmts: vec![self.parse_stmt()?],
+        });
         let proto = Box::new(FuncProto {
             name: "__anon_expr".to_owned(),
             params: vec![],
@@ -139,6 +142,7 @@ impl<'a> Parser<'a> {
     }
 
     /// Get a reference to the parser's symbol table.
+    #[cfg(test)]
     pub fn sym_tbl(&self) -> &SymbolTable {
         &self.sym_tbl
     }
@@ -148,33 +152,6 @@ impl<'a> Parser<'a> {
 mod tests {
     use super::*;
     use crate::ast::{BinOp, ExprKind::*, LitKind, StmtKind::*};
-
-    #[test]
-    fn parse_paren_expr() {
-        let input = "(a + b)";
-        let source = Source::new(input, "<string literal>");
-        let tokens = TokenStream::new(&source);
-        let mut parser = Parser::new(tokens);
-        let expr = parser.parse_expr().unwrap();
-
-        if let Binary(op, lhs, rhs) = expr.kind {
-            assert_eq!(op, BinOp::Add);
-
-            if let Var(name) = lhs.kind {
-                assert_eq!(name, "a");
-            } else {
-                panic!("expected variable reference");
-            }
-
-            if let Var(name) = rhs.kind {
-                assert_eq!(name, "b");
-            } else {
-                panic!("expected variable reference");
-            }
-        } else {
-            panic!("expected binary expression");
-        }
-    }
 
     #[test]
     fn var_def() {

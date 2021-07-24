@@ -52,6 +52,28 @@ impl<'a> Parser<'a> {
         }))
     }
 
+    fn parse_cond_expr(&mut self) -> ParseResult<Box<Expr>> {
+        use ExprKind::Cond;
+        let mut region = Region {
+            start: self.tokens.offset(),
+            end: 0,
+        };
+
+        let condition = self.parse_expr()?;
+        let if_block = self.parse_block()?;
+        let else_block = if let Token::Else = self.eat() {
+            Some(self.parse_block()?)
+        } else {
+            None
+        };
+
+        region.end = self.tokens.offset();
+
+        let kind = Cond(condition, if_block, else_block);
+
+        Ok(Box::new(Expr { region, kind }))
+    }
+
     pub(super) fn parse_expr(&mut self) -> ParseResult<Box<Expr>> {
         let lhs = self.parse_primary()?;
         self.parse_bin_op_rhs(0, lhs)
@@ -85,6 +107,11 @@ impl<'a> Parser<'a> {
                 Ok(Box::new(Expr { kind, region }))
             }
             Token::OpenParen => self.parse_paren_expr(),
+            Token::If => {
+                let mut expr = self.parse_cond_expr()?;
+                expr.region.start = start;
+                Ok(expr)
+            }
             tok => {
                 Err(self.syntax_error(&format!("expected an expression, instead found `{}`", tok)))
             }
@@ -128,6 +155,94 @@ impl<'a> Parser<'a> {
                     end: self.tokens.offset(),
                 },
             });
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::ast::BinOp;
+    use crate::ast::ExprKind::*;
+    use crate::ast::StmtKind;
+    use crate::lexer::TokenStream;
+    use crate::source::Source;
+
+    use super::*;
+
+    #[test]
+    fn paren_expressions() {
+        let input = "(a + b)";
+        let source = Source::new(input, "<string literal>");
+        let tokens = TokenStream::new(&source);
+        let mut parser = Parser::new(tokens);
+        let expr = parser.parse_expr().unwrap();
+
+        if let Binary(op, lhs, rhs) = expr.kind {
+            assert_eq!(op, BinOp::Add);
+
+            if let Var(name) = lhs.kind {
+                assert_eq!(name, "a");
+            } else {
+                panic!("expected variable reference");
+            }
+
+            if let Var(name) = rhs.kind {
+                assert_eq!(name, "b");
+            } else {
+                panic!("expected variable reference");
+            }
+        } else {
+            panic!("expected binary expression");
+        }
+    }
+
+    #[test]
+    fn conditionals() {
+        use LitKind::*;
+        let input = "\
+        if x >= 0 {\n\
+            positive();
+        } else {\n\
+            negative();\n\
+        }";
+        let source = Source::new(input, "<string literal>");
+        let tokens = TokenStream::new(&source);
+        let mut parser = Parser::new(tokens);
+        let expr = parser.parse_expr().unwrap();
+
+        if let Cond(condition, if_block, else_block) = expr.kind {
+            if let Binary(op, lhs, rhs) = condition.kind {
+                assert_eq!(op, BinOp::Ge);
+                if let Var(name) = lhs.kind {
+                    assert_eq!(name, "x");
+                } else {
+                    panic!("expected variable reference");
+                }
+
+                if let Lit(Int(num)) = rhs.kind {
+                    assert_eq!(num, 0);
+                } else {
+                    panic!("expected an integer literal");
+                }
+            } else {
+                panic!("expected binary expression");
+            }
+
+            if let StmtKind::Expr(expr) = &if_block.stmts.last().unwrap().kind {
+                if let Call(name, args) = &expr.kind {
+                    assert_eq!(name, "positive");
+                    assert!(args.is_empty());
+                }
+            }
+
+            if let StmtKind::Expr(expr) = &else_block.unwrap().stmts.last().unwrap().kind {
+                if let Call(name, args) = &expr.kind {
+                    assert_eq!(name, "negative");
+                    assert!(args.is_empty());
+                }
+            }
+        } else {
+            panic!("expected a conditional expression");
         }
     }
 }

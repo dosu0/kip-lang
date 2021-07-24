@@ -108,6 +108,14 @@ impl<'a> Parser<'a> {
                 };
                 Ok(Box::new(Expr { kind, region }))
             }
+            Token::Char(ch) => {
+                let kind = Lit(Char(ch));
+                let region = Region {
+                    start,
+                    end: self.tokens.offset(),
+                };
+                Ok(Box::new(Expr { kind, region }))
+            }
             Token::OpenParen => self.parse_paren_expr(),
             Token::If => {
                 let mut expr = self.parse_cond_expr()?;

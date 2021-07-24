@@ -104,9 +104,8 @@ impl<'a, 'b> TypeChecker<'a, 'b> {
         use LitKind::*;
         match &e.kind {
             Lit(kind) => match kind {
-                Int(_) => Some(Type::Int),
+                Int(_) | Char(_) => Some(Type::Int),
                 Str(_) => Some(Type::Str),
-                Char(_) => Some(Type::Char),
             },
             Var(ref name) => match self.sym_tbl.get(name) {
                 // TODO: remove this clone?

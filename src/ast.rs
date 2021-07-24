@@ -148,7 +148,6 @@ pub enum Type {
     // Builtins:
     /// signed and unsigned integers
     Int,
-    Char,
     Str,
     /// the default return type of a function
     Void,

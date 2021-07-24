@@ -286,11 +286,17 @@ impl<'a> TokenStream<'a> {
             ',' => Comma,
             ';' => Semicolon,
             '>' => match self.peek() {
-                Equal => Ge,
+                Equal => {
+                    self.eat();
+                    Ge
+                }
                 _ => Gt,
             },
             '<' => match self.peek() {
-                Equal => Le,
+                Equal => {
+                    self.eat();
+                    Le
+                }
                 _ => Lt,
             },
             '+' => Plus,
@@ -381,6 +387,16 @@ mod tests {
         // Should return None when done lexing...
         assert_eq!(tokens.eat(), Eof);
         assert_eq!(tokens.eat(), Eof);
+    }
+
+    #[test]
+    fn comparison() {
+        let input = "9000 >= 1";
+        let source = Source::new(input, "<string literal>");
+        let mut tokens = TokenStream::new(&source);
+        assert_eq!(tokens.eat(), Number(9000));
+        assert_eq!(tokens.eat(), Ge);
+        assert_eq!(tokens.eat(), Number(1));
     }
 
     #[test]

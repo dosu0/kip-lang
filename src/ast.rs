@@ -192,13 +192,18 @@ pub mod visit {
             Var(_) => {}
 
             // expressions that may recurse
-            Binary(_, _, _) => {
-                v.visit_expr(e);
+            Binary(_, ref lhs, ref rhs) => {
+                v.visit_expr(lhs);
+                v.visit_expr(rhs);
             }
-            Call(_, _) => {
-                v.visit_expr(e);
+            Call(_, ref args) => {
+                for arg in args {
+                    v.visit_expr(arg);
+                }
             }
-            Cond(_, _, _) => todo!(),
+            Cond(ref condition, _, _) => {
+                v.visit_expr(condition);
+            },
         }
     }
 

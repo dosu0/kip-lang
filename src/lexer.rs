@@ -52,8 +52,6 @@ pub enum Token {
     Star,
     /// `=`
     Equal,
-    /// `:=` maybe not?
-    /// Assign,
     /// `%`
     Percent,
     /// `>`

@@ -9,8 +9,8 @@ if exists("b:current_syntax")
 endif
 
 syntax case match
-syntax keyword kipKeyword extern func var ret
-syntax keyword kipStatement if else
+syntax keyword kipKeyword extern func var
+syntax keyword kipStatement if else ret
 syntax keyword kipType s32 s64 u32 u64
 syntax keyword kipType str
 
@@ -31,7 +31,7 @@ syntax match kipOperator /</
 
 syntax match kipFunction /\<\h\w*\>(/he=e-1,me=e-1
 " type annotations
-syntax region kipType start=/:\s*/ end=/\<\h\w*\>/
+syntax region kipType start=/:\s*/ms=s+1 end=/\<\h\w*\>/
 syntax region kipString start=/"/ end=/"/
 syntax region kipString start=/'/ end=/'/
 

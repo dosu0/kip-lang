@@ -12,6 +12,7 @@ impl<'a> Parser<'a> {
             start: self.tokens.offset(),
             end: 0,
         };
+        let mut should_end_with_semicolon = true;
         let stmt = match self.peek() {
             Token::Var => {
                 region.start = self.tokens.offset();
@@ -30,13 +31,14 @@ impl<'a> Parser<'a> {
             }
             _ => {
                 let expr = *self.parse_expr()?;
+                should_end_with_semicolon = !expr.kind.is_cond();
                 let kind = StmtKind::Expr(expr);
                 region.end = self.tokens.offset();
                 Box::new(Stmt { kind, region })
             }
         };
 
-        if self.eat() != Token::Semicolon {
+        if should_end_with_semicolon && self.eat() != Token::Semicolon {
             return Err(self.syntax_error("expected `;` to terminate statement"));
         }
 

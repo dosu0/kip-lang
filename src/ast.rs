@@ -20,7 +20,15 @@ pub enum ExprKind {
     /// assign -> ident `=` expr
     Assign(String, Box<Expr>)
 }
-/// `Block`: found in conditionals, loops, and function definitions
+
+impl ExprKind {
+    /// Returns `true` if the expr_kind is [`Cond`].
+    pub fn is_cond(&self) -> bool {
+        matches!(self, Self::Cond(..))
+    }
+}
+
+/// [`Block`]: found in conditionals, loops, and function definitions
 /// block -> stmt*
 #[derive(Debug)]
 pub struct Block {

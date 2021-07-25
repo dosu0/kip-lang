@@ -182,6 +182,7 @@ pub mod visit {
         fn visit_expr(&mut self, e: &Expr) -> T;
         fn visit_stmt(&mut self, s: &Stmt) -> T;
         fn visit_func(&mut self, f: &FuncDef) -> T;
+        fn visit_block(&mut self, b: &Block) -> T;
     }
 
     pub fn walk_expr<T>(v: &mut impl Visitor<T>, e: &Expr) {
@@ -208,8 +209,6 @@ pub mod visit {
     }
 
     pub fn walk_func<T>(v: &mut impl Visitor<T>, f: &FuncDef) {
-        for stmt in &f.body.stmts {
-            v.visit_stmt(stmt);
-        }
+        v.visit_block(&f.body);
     }
 }

@@ -222,6 +222,12 @@ impl<'a, 'b> AstVisitor<()> for TypeChecker<'a, 'b> {
             }
         }
     }
+
+    fn visit_block(&mut self, b: &Block) {
+        for stmt in &b.stmts {
+            self.visit_stmt(stmt);
+        }
+    }
 }
 
 #[cfg(test)]

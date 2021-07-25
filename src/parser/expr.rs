@@ -14,9 +14,9 @@ impl<'a> Parser<'a> {
         Ok(expr)
     }
 
-    /// ident_expr -> ident | call_expr
+    /// ident_expr -> var | call | assign
     fn parse_ident_expr(&mut self, ident_name: String) -> ParseResult<Box<Expr>> {
-        use ExprKind::{Call, Var};
+        use ExprKind::{Assign, Call, Var};
         let start = self.tokens.offset();
         let kind = if self.peek() == Token::OpenParen {
             self.eat();
@@ -41,6 +41,10 @@ impl<'a> Parser<'a> {
             }
 
             Call(ident_name, args)
+        } else if self.peek() == /* TODO: more assign operators */ Token::Equal {
+            self.eat();
+            let init = self.parse_expr()?;
+            Assign(ident_name, init)
         } else {
             Var(ident_name)
         };
@@ -179,6 +183,29 @@ mod tests {
 
     use super::*;
 
+    #[test]
+    fn assign_expression() {
+        let input = "a = b = c";
+        let source = Source::new(input, "<string literal>");
+        let tokens = TokenStream::new(&source);
+        let mut parser = Parser::new(tokens);
+        let expr = parser.parse_expr().unwrap();
+        if let Assign(name, init) = expr.kind {
+            assert_eq!(name, "a");
+            if let Assign(name, init) = init.kind {
+                assert_eq!(name, "b");
+                if let Var(name) = init.kind {
+                    assert_eq!(name, "c");
+                } else {
+                    panic!("expected an variable");
+                }
+            } else {
+                panic!("expected an assignment");
+            }
+        } else {
+            panic!("expected an assignment");
+        }
+    }
     #[test]
     fn call() {
         let input = "foo(bar, baz)";

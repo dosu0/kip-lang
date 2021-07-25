@@ -1,7 +1,7 @@
 //! Abstract Syntax Tree (AST) nodes
 
 /// expression (expr)
-/// expr -> number | var | binary | call | var
+/// expr -> lit | var | binary | call | conditional | assign
 #[derive(Debug)]
 pub enum ExprKind {
     Lit(LitKind),
@@ -16,6 +16,9 @@ pub enum ExprKind {
     /// an if-else statement
     /// cond_expr -> `if` expr block | `if` expr block `else` block
     Cond(Box<Expr>, Box<Block>, Option<Box<Block>>),
+    /// an assignment
+    /// assign -> ident `=` expr
+    Assign(String, Box<Expr>)
 }
 /// `Block`: found in conditionals, loops, and function definitions
 /// block -> stmt*
@@ -191,8 +194,10 @@ pub mod visit {
             // deadends
             Lit(_) => {}
             Var(_) => {}
-
             // expressions that may recurse
+            Assign(_, ref init) => {
+                v.visit_expr(init);
+            }
             Binary(_, ref lhs, ref rhs) => {
                 v.visit_expr(lhs);
                 v.visit_expr(rhs);

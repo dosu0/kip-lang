@@ -107,6 +107,12 @@ impl<'a, 'b> TypeChecker<'a, 'b> {
                 Int(_) | Char(_) => Some(Type::Int),
                 Str(_) => Some(Type::Str),
             },
+
+            Assign(ref name, _) => match self.sym_tbl.get(name) {
+                // TODO: remove this clone?
+                Some(Symbol::Var(ty)) => Some(ty.clone()),
+                _ => None,
+            },
             Var(ref name) => match self.sym_tbl.get(name) {
                 // TODO: remove this clone?
                 Some(Symbol::Var(ty)) => Some(ty.clone()),
@@ -132,6 +138,11 @@ impl<'a, 'b> AstVisitor<()> for TypeChecker<'a, 'b> {
         use TypeErrorKind::*;
         match &e.kind {
             Lit(_) => {}
+
+            Assign(ref name, _) => match self.sym_tbl.get(name) {
+                Some(Symbol::Var(..)) => {}
+                _ => self.type_error(UndefinedSymbol, e.region),
+            },
 
             Var(ref name) => match self.sym_tbl.get(name) {
                 Some(Symbol::Var(..)) => {}

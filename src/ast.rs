@@ -18,7 +18,7 @@ pub enum ExprKind {
     Cond(Box<Expr>, Box<Block>, Option<Box<Block>>),
     /// an assignment
     /// assign -> ident `=` expr
-    Assign(String, Box<Expr>)
+    Assign(String, Box<Expr>),
 }
 
 impl ExprKind {
@@ -52,7 +52,7 @@ pub struct Region {
 pub enum LitKind {
     Int(i64),
     Str(String),
-    Char(char)
+    Char(char),
 }
 
 /// ordered from highest to lowest precedence
@@ -217,7 +217,7 @@ pub mod visit {
             }
             Cond(ref condition, _, _) => {
                 v.visit_expr(condition);
-            },
+            }
         }
     }
 

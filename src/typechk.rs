@@ -29,7 +29,8 @@ impl<'a> TypeError<'a> {
             .take(len)
             .collect::<String>();
 
-        eprintln!("here:\n {}", string);
+        eprintln!("here:");
+        eprintln!("{}", string);
         for _ in 0..len {
             eprint!("^");
         }

@@ -1,11 +1,10 @@
 //! Type checking
-use std::{fmt, io};
-
-use crate::ast::visit::Visitor as AstVisitor;
+use crate::ast::visit::{walk_expr, Visitor as AstVisitor};
 use crate::ast::*;
 use crate::source::Source;
 use crate::symbol::{Symbol, SymbolTable};
 use log::error;
+use std::{fmt, io};
 use TypeErrorKind::*;
 
 #[derive(Debug)]
@@ -76,6 +75,7 @@ impl fmt::Display for TypeErrorKind {
 pub struct TypeChecker<'a, 'b> {
     input: &'a Source,
     sym_tbl: &'b SymbolTable,
+    local_scope: &'b SymbolTable,
     errors: Vec<TypeError<'a>>,
 }
 
@@ -84,8 +84,23 @@ impl<'a, 'b> TypeChecker<'a, 'b> {
         Self {
             errors: vec![],
             sym_tbl,
+            local_scope: sym_tbl,
             input,
         }
+    }
+
+    pub fn get_var_type(&self, name: &str) -> Option<&Type> {
+        self.local_scope
+            .get(name)
+            .and_then(|sym| sym.as_var())
+            .or_else(|| self.sym_tbl.get(name).and_then(|sym| sym.as_var()))
+    }
+
+    pub fn var_exists(&self, name: &str) -> bool {
+        self.local_scope
+            .get(name)
+            .map(|sym| sym.is_var())
+            .unwrap_or_else(|| self.sym_tbl.get(name).map_or(false, |sym| sym.is_var()))
     }
 
     pub fn errors(&self) -> &[TypeError] {
@@ -114,11 +129,7 @@ impl<'a, 'b> TypeChecker<'a, 'b> {
                 Some(Symbol::Var(ty)) => Some(ty.clone()),
                 _ => None,
             },
-            Var(ref name) => match self.sym_tbl.get(name) {
-                // TODO: remove this clone?
-                Some(Symbol::Var(ty)) => Some(ty.clone()),
-                _ => None,
-            },
+            Var(ref name) => self.get_var_type(name).map(|t| t.clone()),
             Binary(_, ref lhs, ref rhs) => match (self.infer_type(lhs), self.infer_type(rhs)) {
                 (Some(lty), Some(rty)) if lty == rty => Some(lty),
                 _ => None,
@@ -140,15 +151,17 @@ impl<'a, 'b> AstVisitor<()> for TypeChecker<'a, 'b> {
         match &e.kind {
             Lit(_) => {}
 
-            Assign(ref name, _) => match self.sym_tbl.get(name) {
-                Some(Symbol::Var(..)) => {}
-                _ => self.type_error(UndefinedSymbol, e.region),
-            },
+            Assign(ref name, _) => {
+                if !self.var_exists(name) {
+                    self.type_error(UndefinedSymbol, e.region);
+                }
+            }
 
-            Var(ref name) => match self.sym_tbl.get(name) {
-                Some(Symbol::Var(..)) => {}
-                _ => self.type_error(UndefinedSymbol, e.region),
-            },
+            Var(ref name) => {
+                if !self.var_exists(name) {
+                    self.type_error(UndefinedSymbol, e.region);
+                }
+            }
 
             Binary(op, ref lhs, ref rhs) => {
                 use BinOp::*;
@@ -190,7 +203,9 @@ impl<'a, 'b> AstVisitor<()> for TypeChecker<'a, 'b> {
                 }
             }
 
-            Cond(_, _, _) => todo!(),
+            Cond(_, _, _) => {
+                walk_expr(self, e);
+            }
         }
     }
 
@@ -201,7 +216,7 @@ impl<'a, 'b> AstVisitor<()> for TypeChecker<'a, 'b> {
             VarDef(name, init) => {
                 self.visit_expr(init);
                 if let Some(inferred_ty) = self.infer_type(init) {
-                    if let Some(Symbol::Var(ty)) = self.sym_tbl.get(name) {
+                    if let Some(ty) = self.get_var_type(name) {
                         if *ty != inferred_ty {
                             self.type_error(Mismatch, s.region);
                         }
@@ -218,6 +233,13 @@ impl<'a, 'b> AstVisitor<()> for TypeChecker<'a, 'b> {
 
     fn visit_func(&mut self, f: &FuncDef) {
         use StmtKind::Ret;
+
+        if let Some(Symbol::Func(_, local)) = self.sym_tbl.get(&f.proto.name) {
+            self.local_scope = local;
+        } else {
+            self.type_error(UndefinedFunc, f.region);
+        }
+
         for stmt in &f.body.stmts {
             match &stmt.kind {
                 Ret(e) => {
@@ -244,10 +266,8 @@ impl<'a, 'b> AstVisitor<()> for TypeChecker<'a, 'b> {
 
 #[cfg(test)]
 mod tests {
-    use crate::{
-        lexer::{Token, TokenStream},
-        parser::Parser,
-    };
+    use crate::lexer::{Token, TokenStream};
+    use crate::parser::Parser;
 
     use super::*;
 
@@ -270,6 +290,6 @@ mod tests {
         typechk.visit_func(&f);
 
         let e = typechk.errors().last().unwrap();
-        assert!(matches!(e.kind, TypeErrorKind::RetTyMismatch));
+        assert!(matches!(e.kind, TypeErrorKind::RetTyMismatch))
     }
 }

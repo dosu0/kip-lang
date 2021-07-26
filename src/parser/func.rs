@@ -17,6 +17,11 @@ impl<'a> Parser<'a> {
 
         if self.eat() == Token::OpenParen {
             let params = self.parse_param_list()?;
+
+            let mut local_symbols = HashMap::new();
+            for param in &params {
+                local_symbols.insert(param.name.clone(), Symbol::Var(param.ty.clone()));
+            }
             let ret = if let Token::Colon = self.peek() {
                 self.eat();
                 self.parse_type_annotation()?
@@ -32,7 +37,8 @@ impl<'a> Parser<'a> {
 
             // TODO: remove clone
             self.sym_tbl
-                .insert(name, Symbol::Func(proto.clone(), HashMap::new()));
+                .insert(name, Symbol::Func(proto.clone(), local_symbols));
+
             Ok(Box::new(proto))
         } else {
             Err(self.syntax_error("expected `(` in function prototype"))

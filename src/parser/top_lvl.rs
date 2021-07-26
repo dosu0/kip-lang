@@ -1,6 +1,6 @@
 use log::error;
 
-use crate::ast::visit::walk_func;
+use crate::ast::visit::Visitor;
 use crate::lexer::Token;
 use crate::parser::Parser;
 use crate::typechk::TypeChecker;
@@ -10,7 +10,7 @@ impl<'a> Parser<'a> {
         if let Ok(func) = self.parse_func() {
             // trace!("parsed a function definition: {:#?}", func);
             let mut typechk = TypeChecker::new(self.input(), &self.sym_tbl);
-            walk_func(&mut typechk, &func);
+            typechk.visit_func(&func);
             for err in typechk.errors() {
                 err.display().unwrap();
             }

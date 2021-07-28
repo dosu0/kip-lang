@@ -381,7 +381,7 @@ impl<'a> Iterator for TokenStream<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn strings_and_chars() {
         let input = "\"foo\" '7'";

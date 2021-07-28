@@ -1,5 +1,7 @@
 //! Abstract Syntax Tree (AST) nodes
 
+use std::fmt;
+
 /// expression (expr)
 /// expr -> lit | var | binary | call | conditional | assign
 #[derive(Debug)]
@@ -120,6 +122,25 @@ impl BinOp {
     }
 }
 
+impl fmt::Display for BinOp {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Mul => '*'.fmt(f),
+            Self::Div => '/'.fmt(f),
+            Self::Mod => '%'.fmt(f),
+            Self::Add => '+'.fmt(f),
+            Self::Sub => '-'.fmt(f),
+            Self::Ge => ">=".fmt(f),
+            Self::Gt => '>'.fmt(f),
+            Self::Lt => '<'.fmt(f),
+            Self::Le => "<=".fmt(f),
+            Self::Eq => "==".fmt(f),
+            Self::Ne => "!=".fmt(f),
+            Self::And => "&&".fmt(f),
+            Self::Or => "||".fmt(f),
+        }
+    }
+}
 /// statement (stmt)
 /// stmt -> expr | var_def `;`
 #[derive(Debug)]

@@ -1,7 +1,7 @@
 " Vim syntax file
 " Language:     Kip
 " Maintainer:   Phoenix
-" Last Change:  2021 Jun 28
+" Last Change:  2021 Jul 27
 " Remark:      None
 
 if exists("b:current_syntax")
@@ -27,6 +27,8 @@ syntax match kipOperator /-/
 syntax match kipOperator /%/
 syntax match kipOperator />/
 syntax match kipOperator /</
+syntax match kipOperator />=/
+syntax match kipOperator /<=/
 " }}}
 
 syntax match kipFunction /\<\h\w*\>(/he=e-1,me=e-1

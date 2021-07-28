@@ -22,7 +22,7 @@ func printd(d: s32) {
 }
 
 func add(a: s32, b: s32): s32 {
-    ret n0 + n1;
+    ret a + b;
 }
 
 func main() {

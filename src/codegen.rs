@@ -111,7 +111,7 @@ impl CodeGenerator {
 
     fn new_tmp_label(&mut self) -> ic::Label {
         use ic::Label;
-        let name = format!("_L{}", self.tmp_var);
+        let name = format!("_L{}", self.tmp_label);
         self.tmp_label += 1;
         Label::new(name)
     }

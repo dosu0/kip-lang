@@ -11,10 +11,10 @@ endif
 syntax case match
 syntax keyword icStatement goto call arg ret
 syntax keyword icConditional ifnz ifz
-syntax match icLabel /\<\h\w*\>:/
 syntax match icNumber /\<\d\+\>/
 syntax match icIdentifier /\<\h\w*\>/
 syntax match icStatement /@\<\h\w*\>/
+syntax match icLabel /\<\h\w*\>:/
 " Section: Operators --- {{{
 syntax match icOperator /:=/
 syntax match icOperator /==/

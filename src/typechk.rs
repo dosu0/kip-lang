@@ -129,7 +129,7 @@ impl<'a, 'b> TypeChecker<'a, 'b> {
                 Some(Symbol::Var(ty)) => Some(ty.clone()),
                 _ => None,
             },
-            Var(ref name) => self.get_var_type(name).map(|t| t.clone()),
+            Var(ref name) => self.get_var_type(name).cloned(),
             Binary(_, ref lhs, ref rhs) => match (self.infer_type(lhs), self.infer_type(rhs)) {
                 (Some(lty), Some(rty)) if lty == rty => Some(lty),
                 _ => None,

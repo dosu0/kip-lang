@@ -158,7 +158,7 @@ impl CodeGenerator {
 
     fn emit_ret(&mut self, value: Option<String>) {
         self.instructions
-            .push(ic::Instruction::Ret(value.map(|v| ic::Primary::Var(v))));
+            .push(ic::Instruction::Ret(value.map(ic::Primary::Var)));
     }
 
     pub fn display_instructions(&self) {

@@ -58,7 +58,7 @@ pub enum LitKind {
 }
 
 /// ordered from highest to lowest precedence
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub enum BinOp {
     /// The `*` operator (multiplication)
     Mul,

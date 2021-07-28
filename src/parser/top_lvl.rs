@@ -1,6 +1,7 @@
 use log::error;
 
 use crate::ast::visit::Visitor;
+use crate::codegen::CodeGenerator;
 use crate::lexer::Token;
 use crate::parser::Parser;
 use crate::typechk::TypeChecker;
@@ -13,6 +14,12 @@ impl<'a> Parser<'a> {
             typechk.visit_func(&func);
             for err in typechk.errors() {
                 err.display().unwrap();
+            }
+
+            if typechk.errors().is_empty() {
+                let mut codegen = CodeGenerator::new();
+                codegen.visit_func(&func);
+                codegen.display_instructions();
             }
         } else {
             self.eat();

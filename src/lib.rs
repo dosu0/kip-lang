@@ -1,5 +1,5 @@
 mod ast;
-// pub mod codegen;
+mod codegen;
 pub mod driver;
 mod lexer;
 pub mod logger;

@@ -64,6 +64,14 @@ pub enum Token {
     Le,
     /// '.'
     Dot,
+    /// `&`
+    Ampersand,
+    /// `&&`
+    DoubleAmpersand,
+    /// `|`
+    Bar,
+    /// `|`
+    DoubleBar,
     Unknown(char),
     Eof,
 }
@@ -82,10 +90,13 @@ impl Token {
             Ge => Some(BinOp::Ge),
             Lt => Some(BinOp::Lt),
             Le => Some(BinOp::Le),
+            DoubleAmpersand => Some(BinOp::And),
+            DoubleBar => Some(BinOp::Or),
             _ => None,
         }
     }
 }
+
 impl fmt::Display for Token {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -112,13 +123,16 @@ impl fmt::Display for Token {
             Star => '*'.fmt(f),
             Slash => '/'.fmt(f),
             Dot => '.'.fmt(f),
-            // Assign => ":=".fmt(f),
             Percent => "%".fmt(f),
             Gt => '>'.fmt(f),
             Ge => ">=".fmt(f),
             Lt => "<".fmt(f),
             Le => "<=".fmt(f),
             Equal => '='.fmt(f),
+            Ampersand => '&'.fmt(f),
+            DoubleAmpersand => "&&".fmt(f),
+            Bar => '|'.fmt(f),
+            DoubleBar => "||".fmt(f),
             Unknown(ch) => ch.fmt(f),
             Eof => "end of file".fmt(f),
             Char(ch) => ch.fmt(f),
@@ -306,6 +320,20 @@ impl<'a> TokenStream<'a> {
                     Le
                 }
                 _ => Lt,
+            },
+            '&' => match self.peek() {
+                Ampersand => {
+                    self.eat();
+                    DoubleAmpersand
+                }
+                _ => Ampersand,
+            },
+            '|' => match self.peek() {
+                Bar => {
+                    self.eat();
+                    DoubleBar
+                }
+                _ => Bar,
             },
             '+' => Plus,
             '-' => Minus,

@@ -29,6 +29,7 @@ syntax match icOperator /<=/
 " }}}
 
 syntax region icString start=/'/ end=/'/
+syntax region icString start=/"/ end=/"/
 
 syntax keyword icTodo TODO FIXME XXX contained
 syntax match icComment /;.*/ contains=icTodo

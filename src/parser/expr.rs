@@ -67,7 +67,8 @@ impl<'a> Parser<'a> {
 
         let condition = self.parse_expr()?;
         let if_block = self.parse_block()?;
-        let else_block = if let Token::Else = self.eat() {
+        let else_block = if let Token::Else = self.peek() {
+            self.eat();
             Some(self.parse_block()?)
         } else {
             None

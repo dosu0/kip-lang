@@ -61,7 +61,7 @@ mod ic {
     }
 
     pub enum Primary {
-        Const(i64),
+        Const(ConstKind),
         Var(String),
     }
 
@@ -69,7 +69,21 @@ mod ic {
         fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
             match self {
                 Self::Var(name) => name.fmt(f),
-                Self::Const(value) => value.fmt(f),
+                Self::Const(kind) => kind.fmt(f),
+            }
+        }
+    }
+
+    pub enum ConstKind {
+        Int(i64),
+        Str(String),
+    }
+
+    impl fmt::Display for ConstKind {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            match self {
+                Self::Int(value) => value.fmt(f),
+                Self::Str(value) => write!(f, "\"{}\"", value.escape_debug()),
             }
         }
     }
@@ -118,8 +132,18 @@ impl CodeGenerator {
 
     // wrapper types suck fr
 
-    fn emit_assign_const(&mut self, name: String, init: i64) {
-        self.emit_assign(name, ic::Expr::Primary(ic::Primary::Const(init)));
+    fn emit_assign_const_int(&mut self, name: String, init: i64) {
+        self.emit_assign(
+            name,
+            ic::Expr::Primary(ic::Primary::Const(ic::ConstKind::Int(init))),
+        );
+    }
+
+    fn emit_assign_const_str(&mut self, name: String, init: String) {
+        self.emit_assign(
+            name,
+            ic::Expr::Primary(ic::Primary::Const(ic::ConstKind::Str(init))),
+        );
     }
 
     fn emit_assign_var(&mut self, name: String, init: String) {
@@ -175,17 +199,17 @@ impl AstVisitor<Option<String>> for CodeGenerator {
             ExprKind::Lit(kind) => match kind {
                 LitKind::Int(k) => {
                     let t = self.new_tmp_var();
-                    self.emit_assign_const(t.clone(), *k);
+                    self.emit_assign_const_int(t.clone(), *k);
                     Some(t)
                 }
-                LitKind::Str(_) => {
+                LitKind::Str(str) => {
                     let t = self.new_tmp_var();
-                    self.emit_assign_const(t.clone(), 9000);
+                    self.emit_assign_const_str(t.clone(), str.clone());
                     Some(t)
                 }
                 LitKind::Char(k) => {
                     let t = self.new_tmp_var();
-                    self.emit_assign_const(t.clone(), *k as i64);
+                    self.emit_assign_const_int(t.clone(), *k as i64);
                     Some(t)
                 }
             },

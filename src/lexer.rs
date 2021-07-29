@@ -196,14 +196,10 @@ impl<'a> TokenStream<'a> {
                     self.bump().unwrap();
 
                     loop {
-                        if let Some(ch) = self.bump() {
-                            if ch == '*' && self.peek_ch() == '/' {
-                                self.bump().unwrap();
-                                break;
-                            }
-                        } else {
-                            // TODO: better error handling :|
-                            panic!("unterminated block comment");
+                        let ch = self.bump().expect("unterminated block comment");
+                        if ch == '*' && self.peek_ch() == '/' {
+                            self.bump().unwrap();
+                            break;
                         }
                     }
                     self.eat()

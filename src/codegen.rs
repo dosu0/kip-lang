@@ -41,6 +41,18 @@ mod ic {
         Ret(Option<Primary>),
     }
 
+    impl Instruction {
+        /// Returns `true` if the instruction is [`Ifz`].
+        pub fn is_ifz(&self) -> bool {
+            matches!(self, Self::Ifz(..))
+        }
+
+        /// Returns `true` if the instruction is [`Label`].
+        pub fn is_label(&self) -> bool {
+            matches!(self, Self::Label(..))
+        }
+    }
+
     impl fmt::Display for Instruction {
         fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
             match self {
@@ -103,6 +115,18 @@ mod ic {
             }
         }
     }
+}
+
+pub fn blocks(ir: &[ic::Instruction]) -> Vec<Vec<&ic::Instruction>> {
+    let mut blocks: Vec<Vec<&ic::Instruction>> = Vec::new();
+    let mut block = Vec::new();
+    for instruction in ir.iter().filter(|i| !i.is_label()) {
+        block.push(instruction);
+        if instruction.is_ifz() {
+            blocks.push(block.drain(..).collect());
+        }
+    }
+    blocks
 }
 
 #[derive(Default)]
@@ -188,6 +212,15 @@ impl CodeGenerator {
     pub fn display_instructions(&self) {
         for instruction in &self.instructions {
             println!("{}", instruction);
+        }
+    }
+
+    pub fn display_blocks(&self) {
+        for (n, block) in blocks(&self.instructions).iter().enumerate() {
+            println!("; block #{}:", n);
+            for instruction in block {
+                println!("{}", instruction);
+            }
         }
     }
 }

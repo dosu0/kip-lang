@@ -12,6 +12,7 @@ use crate::lexer::{Token, TokenStream};
 use crate::source::Source;
 use crate::symbol::SymbolTable;
 use crate::typechk::TypeErrorKind;
+use std::borrow::Cow;
 use std::fmt;
 
 type ParseResult<T> = Result<T, ParseError>;
@@ -21,12 +22,12 @@ pub struct ParseError {
     /// line, col
     loc: (usize, usize),
     kind: ParseErrorKind,
-    hint: Option<String>,
+    hint: Option<Cow<'static, str>>,
 }
 
 #[derive(Debug, Clone)]
 enum ParseErrorKind {
-    SyntaxError(String),
+    SyntaxError(Cow<'static, str>),
     TypeError(TypeErrorKind),
     RedefinedSymbol(String),
     InvalidModPath(String),
@@ -86,23 +87,27 @@ impl<'a> Parser<'a> {
         self.tokens.peek()
     }
 
-    fn syntax_error(&mut self, msg: &str) -> ParseError {
+    fn syntax_error<M: Into<Cow<'static, str>>>(&mut self, msg: M) -> ParseError {
         use ParseErrorKind::*;
         let err = ParseError {
             loc: (self.tokens.line(), self.tokens.col()),
-            kind: SyntaxError(msg.to_string()),
+            kind: SyntaxError(msg.into()),
             hint: None,
         };
         self.errors.push(err.clone());
         err
     }
 
-    fn redefined_symbol_error(&mut self, sym: &str, hint: Option<&str>) -> ParseError {
+    fn redefined_symbol_error<H: Into<Cow<'static, str>>>(
+        &mut self,
+        sym: String,
+        hint: Option<H>,
+    ) -> ParseError {
         use ParseErrorKind::*;
         let err = ParseError {
             loc: (self.tokens.line(), self.tokens.col()),
-            kind: RedefinedSymbol(sym.to_owned()),
-            hint: hint.map(|h| h.to_owned()),
+            kind: RedefinedSymbol(sym),
+            hint: hint.map(|h| h.into()),
         };
         self.errors.push(err.clone());
         err

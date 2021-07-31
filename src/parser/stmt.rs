@@ -72,10 +72,10 @@ impl<'a> Parser<'a> {
         if let Some(sym) = self.sym_tbl.get(&name) {
             let e = match sym {
                 Symbol::Func(_, _) => {
-                    self.redefined_symbol_error(&name, Some("a function with the same name exists"))
+                    self.redefined_symbol_error(name, Some("a function with the same name exists"))
                 }
                 Symbol::Var(_) => self.redefined_symbol_error(
-                    &name,
+                    name,
                     Some("another variable with the same name exists"),
                 ),
             };
@@ -105,7 +105,10 @@ impl<'a> Parser<'a> {
                 if name.is_empty() {
                     Err(self.invalid_module_error(path))
                 } else if self.sym_tbl.contains_key(name) {
-                    Err(self.redefined_symbol_error(name, Some("remove this import statement")))
+                    Err(self.redefined_symbol_error(
+                        name.to_owned(),
+                        Some("remove this import statement"),
+                    ))
                 } else {
                     self.sym_tbl
                         .insert(name.to_owned(), Symbol::Var(Type::Other(name.to_owned())));

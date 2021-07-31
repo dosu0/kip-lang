@@ -127,9 +127,10 @@ impl<'a> Parser<'a> {
                 expr.region.start = start;
                 Ok(expr)
             }
-            tok => {
-                Err(self.syntax_error(&format!("expected an expression, instead found `{}`", tok)))
-            }
+            tok => Err(self.syntax_error::<String>(format!(
+                "expected an expression, instead found `{}`",
+                tok
+            ))),
         }
     }
 

@@ -7,3 +7,4 @@ mod parser;
 mod source;
 mod symbol;
 mod typechk;
+pub mod cli;

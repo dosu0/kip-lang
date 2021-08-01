@@ -8,6 +8,7 @@ description = "Just another programming language"
 [dependencies]
 atty = "0.2.14"
 termcolor = "1.1.2"
+structopt = "0.3.22"
 
 [dependencies.log]
 version = "0.4"

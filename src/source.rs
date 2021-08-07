@@ -7,7 +7,7 @@ pub struct Source {
 
 impl Source {
     #[cfg(test)]
-    pub fn new<T: Into<String>>(contents: T, name: T) -> Self {
+    pub fn new<T: Into<String>, U: Into<String>>(contents: T, name: U) -> Self {
         Self {
             contents: contents.into(),
             name: name.into(),

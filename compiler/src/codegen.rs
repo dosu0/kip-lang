@@ -3,23 +3,33 @@
 //! high-level enough that it's machine indepedent, but low level enough that it's easy (enough) to
 //! convert to assembly/machine code.
 
+use std::collections::HashMap;
+
 use crate::ast::visit::Visitor as AstVisitor;
 use crate::ast::*;
+use crate::interner::Symbol;
 
 /// [`ic`]: intermediate code
+/// TODO: remove this module
 mod ic {
+    use crate::interner::Symbol;
     use std::fmt;
 
     pub use crate::ast::BinOp;
 
     #[derive(Clone)]
     pub struct Label {
-        pub name: String,
+        pub name: Symbol,
     }
 
     impl Label {
-        pub fn new<T: Into<String>>(name: T) -> Self {
-            Label { name: name.into() }
+        pub fn new(name: Symbol) -> Self {
+            Self { name }
+        }
+        pub fn from_str(name: &str) -> Self {
+            Self {
+                name: Symbol::intern(name),
+            }
         }
     }
 
@@ -31,8 +41,8 @@ mod ic {
 
     pub enum Instruction {
         // psuedo instruction
-        Label(String),
-        Assign(String, Expr),
+        Label(Symbol),
+        Assign(Symbol, Expr),
         Goto(Label),
         /// [`Ifz`]: if-zero
         /// ifz _t0 goto _L0
@@ -72,9 +82,10 @@ mod ic {
         }
     }
 
+    #[derive(Clone, Hash, PartialEq, Eq)]
     pub enum Primary {
         Const(ConstKind),
-        Var(String),
+        Var(Symbol),
     }
 
     impl fmt::Display for Primary {
@@ -86,22 +97,24 @@ mod ic {
         }
     }
 
+    #[derive(Clone, Hash, PartialEq, Eq)]
     pub enum ConstKind {
         Int(i64),
-        Str(String),
+        Str(Symbol),
     }
 
     impl fmt::Display for ConstKind {
         fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
             match self {
                 Self::Int(value) => value.fmt(f),
-                Self::Str(value) => write!(f, "\"{}\"", value.escape_debug()),
+                Self::Str(string) => write!(f, "\"{}\"", string.as_str().escape_debug()),
             }
         }
     }
 
+    #[derive(Clone, Hash, PartialEq, Eq)]
     pub enum Expr {
-        Call(String),
+        Call(Symbol),
         Binary(BinOp, Primary, Primary),
         Primary(Primary),
     }
@@ -117,16 +130,23 @@ mod ic {
     }
 }
 
-pub fn blocks(ir: &[ic::Instruction]) -> Vec<Vec<&ic::Instruction>> {
-    let mut blocks: Vec<Vec<&ic::Instruction>> = Vec::new();
-    let mut block = Vec::new();
-    for instruction in ir.iter().filter(|i| !i.is_label()) {
-        block.push(instruction);
-        if instruction.is_ifz() {
-            blocks.push(block.drain(..).collect());
+fn blocks(instructions: &mut Vec<ic::Instruction>) -> Vec<&mut [ic::Instruction]> {
+    instructions.split_inclusive_mut(|i| i.is_ifz()).collect()
+}
+
+fn elim_common_subexprs(block: &mut [ic::Instruction]) {
+    use ic::Instruction::Assign;
+    use ic::{Expr, Primary};
+
+    let mut available_expressions: HashMap<Expr, Symbol> = HashMap::new();
+    for instruction in block {
+        if let Assign(var, expr) = instruction {
+            if let Some(available_var) = available_expressions.get(expr) {
+                *expr = Expr::Primary(Primary::Var(available_var.to_owned()));
+            }
+            available_expressions.insert(expr.clone(), var.to_owned());
         }
     }
-    blocks
 }
 
 #[derive(Default)]
@@ -141,61 +161,61 @@ impl CodeGenerator {
         Default::default()
     }
 
-    fn new_tmp_var(&mut self) -> String {
+    fn new_tmp_var(&mut self) -> Symbol {
         let t = format!("_t{}", self.tmp_var);
         self.tmp_var += 1;
-        t
+        Symbol::intern(&t)
     }
 
     fn new_tmp_label(&mut self) -> ic::Label {
         use ic::Label;
         let name = format!("_L{}", self.tmp_label);
         self.tmp_label += 1;
-        Label::new(name)
+        Label::from_str(&name)
     }
 
     // wrapper types suck fr
 
-    fn emit_assign_const_int(&mut self, name: String, init: i64) {
+    fn emit_assign_const_int(&mut self, name: Symbol, init: i64) {
         self.emit_assign(
             name,
             ic::Expr::Primary(ic::Primary::Const(ic::ConstKind::Int(init))),
         );
     }
 
-    fn emit_assign_const_str(&mut self, name: String, init: String) {
+    fn emit_assign_const_str(&mut self, name: Symbol, init: Symbol) {
         self.emit_assign(
             name,
             ic::Expr::Primary(ic::Primary::Const(ic::ConstKind::Str(init))),
         );
     }
 
-    fn emit_assign_var(&mut self, name: String, init: String) {
+    fn emit_assign_var(&mut self, name: Symbol, init: Symbol) {
         self.emit_assign(name, ic::Expr::Primary(ic::Primary::Var(init)));
     }
 
-    fn emit_assign(&mut self, name: String, init: ic::Expr) {
+    fn emit_assign(&mut self, name: Symbol, init: ic::Expr) {
         self.instructions.push(ic::Instruction::Assign(name, init));
     }
 
-    fn emit_assign_call(&mut self, name: String, func: String) {
+    fn emit_assign_call(&mut self, name: Symbol, func: Symbol) {
         self.instructions
             .push(ic::Instruction::Assign(name, ic::Expr::Call(func)));
     }
 
-    fn emit_assign_binary(&mut self, name: String, op: ic::BinOp, lhs: String, rhs: String) {
+    fn emit_assign_binary(&mut self, name: Symbol, op: ic::BinOp, lhs: Symbol, rhs: Symbol) {
         self.instructions.push(ic::Instruction::Assign(
             name,
             ic::Expr::Binary(op, ic::Primary::Var(lhs), ic::Primary::Var(rhs)),
         ));
     }
 
-    fn emit_arg(&mut self, name: String) {
+    fn emit_arg(&mut self, name: Symbol) {
         self.instructions
             .push(ic::Instruction::Arg(ic::Primary::Var(name)));
     }
 
-    fn emit_ifz(&mut self, condition: String, label: ic::Label) {
+    fn emit_ifz(&mut self, condition: Symbol, label: ic::Label) {
         self.instructions
             .push(ic::Instruction::Ifz(ic::Primary::Var(condition), label));
     }
@@ -204,49 +224,53 @@ impl CodeGenerator {
         self.instructions.push(ic::Instruction::Label(label.name));
     }
 
-    fn emit_ret(&mut self, value: Option<String>) {
+    fn emit_ret(&mut self, value: Option<Symbol>) {
         self.instructions
             .push(ic::Instruction::Ret(value.map(ic::Primary::Var)));
     }
 
-    pub fn display_instructions(&self) {
+    pub fn display_instructions(&mut self) {
+        for instruction in &self.instructions {
+            println!("{}", instruction);
+        }
+
+        self.optimize();
+
+        println!("; optimized instructions");
         for instruction in &self.instructions {
             println!("{}", instruction);
         }
     }
 
-    pub fn display_blocks(&self) {
-        for (n, block) in blocks(&self.instructions).iter().enumerate() {
-            println!("; block #{}:", n);
-            for instruction in block {
-                println!("{}", instruction);
-            }
+    pub fn optimize(&mut self) {
+        for block in blocks(&mut self.instructions) {
+            elim_common_subexprs(block);
         }
     }
 }
 
 /// Only [`CodeGenerator::visit_expr`] returns a string (the name of temporary it generates)
-impl AstVisitor<Option<String>> for CodeGenerator {
-    fn visit_expr(&mut self, e: &Expr) -> Option<String> {
+impl AstVisitor<Option<Symbol>> for CodeGenerator {
+    fn visit_expr(&mut self, e: &Expr) -> Option<Symbol> {
         match &e.kind {
             ExprKind::Lit(kind) => match kind {
-                LitKind::Int(k) => {
+                Lit::Int(k) => {
                     let t = self.new_tmp_var();
-                    self.emit_assign_const_int(t.clone(), *k);
+                    self.emit_assign_const_int(t, *k);
                     Some(t)
                 }
-                LitKind::Str(str) => {
+                Lit::Str(str) => {
                     let t = self.new_tmp_var();
                     self.emit_assign_const_str(t.clone(), str.clone());
                     Some(t)
                 }
-                LitKind::Char(k) => {
+                Lit::Char(k) => {
                     let t = self.new_tmp_var();
                     self.emit_assign_const_int(t.clone(), *k as i64);
                     Some(t)
                 }
             },
-            ExprKind::Var(name) => {
+            ExprKind::Variable(name) => {
                 let t = self.new_tmp_var();
                 self.emit_assign_var(t.clone(), name.clone());
                 Some(t)
@@ -267,11 +291,11 @@ impl AstVisitor<Option<String>> for CodeGenerator {
                 self.emit_assign_call(t.clone(), func.clone());
                 Some(t)
             }
-            ExprKind::Cond(ref cond, ref if_block, else_block) => {
+            ExprKind::Cond(ref cond, ref then_branch, else_branch) => {
                 let t = self.visit_expr(cond).unwrap();
                 let label = self.new_tmp_label();
                 self.emit_ifz(t, label.clone());
-                self.visit_block(if_block);
+                self.visit_block(then_branch);
                 self.emit_label(label);
                 if let Some(ref else_block) = else_block {
                     self.visit_block(else_block);
@@ -285,17 +309,18 @@ impl AstVisitor<Option<String>> for CodeGenerator {
                 self.emit_assign_var(var.clone(), t);
                 Some(var.clone())
             }
+            ExprKind::Unary(_, _) => todo!(),
         }
     }
 
-    fn visit_stmt(&mut self, s: &Stmt) -> Option<String> {
-        match &s.kind {
+    fn visit_stmt(&mut self, s: &Stmt) -> Option<Symbol> {
+        match s.kind {
             StmtKind::Expr(ref expr) => {
                 self.visit_expr(expr);
             }
-            StmtKind::VarDef(name, ref init) => {
+            StmtKind::Var(name, ref init) => {
                 let t = self.visit_expr(init).unwrap();
-                self.emit_assign_var(name.clone(), t);
+                self.emit_assign_var(name, t);
             }
             StmtKind::Ret(ref expr) => {
                 let t = self.visit_expr(expr);
@@ -306,14 +331,14 @@ impl AstVisitor<Option<String>> for CodeGenerator {
         None
     }
 
-    fn visit_func(&mut self, f: &FuncDef) -> Option<String> {
+    fn visit_func(&mut self, f: &FuncDef) -> Option<Symbol> {
         use ic::Label;
-        let label = Label::new(&f.proto.name);
+        let label = Label::new(f.proto.name);
         self.emit_label(label);
         self.visit_block(&f.body)
     }
 
-    fn visit_block(&mut self, b: &Block) -> Option<String> {
+    fn visit_block(&mut self, b: &Block) -> Option<Symbol> {
         for s in &b.stmts {
             self.visit_stmt(s);
         }

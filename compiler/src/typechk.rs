@@ -16,8 +16,6 @@ pub struct TypeError<'a> {
 
 impl<'a> TypeError<'a> {
     pub fn display(&self) -> io::Result<()> {
-        let len = self.region.end - self.region.start;
-
         error!(target: "type_checker", "{}: {}", self.source.name, self.kind);
 
         let string = self
@@ -25,12 +23,12 @@ impl<'a> TypeError<'a> {
             .contents
             .chars()
             .skip(self.region.start)
-            .take(len)
+            .take(self.region.len)
             .collect::<String>();
 
         eprintln!("here:");
         eprintln!("{}", string);
-        for _ in 0..len {
+        for _ in 0..self.region.len {
             eprint!("^");
         }
 
@@ -73,7 +71,7 @@ impl fmt::Display for TypeErrorKind {
 // type TypeChkResult = Result<(), TypeError>;
 
 pub struct TypeChecker<'a, 'b> {
-    input: &'a Source,
+    // input: &'a Source,
     sym_tbl: &'b SymbolTable,
     local_scope: &'b SymbolTable,
     errors: Vec<TypeError<'a>>,
@@ -117,7 +115,7 @@ impl<'a, 'b> TypeChecker<'a, 'b> {
 
     fn infer_type(&self, e: &Expr) -> Option<Type> {
         use ExprKind::*;
-        use LitKind::*;
+        use Lit::*;
         match &e.kind {
             Lit(kind) => match kind {
                 Int(_) | Char(_) => Some(Type::Int),
@@ -129,7 +127,7 @@ impl<'a, 'b> TypeChecker<'a, 'b> {
                 Some(Symbol::Var(ty)) => Some(ty.clone()),
                 _ => None,
             },
-            Var(ref name) => self.get_var_type(name).cloned(),
+            Variable(ref name) => self.get_var_type(name).cloned(),
             Binary(_, ref lhs, ref rhs) => match (self.infer_type(lhs), self.infer_type(rhs)) {
                 (Some(lty), Some(rty)) if lty == rty => Some(lty),
                 _ => None,
@@ -157,7 +155,7 @@ impl<'a, 'b> AstVisitor<()> for TypeChecker<'a, 'b> {
                 }
             }
 
-            Var(ref name) => {
+            Variable(ref name) => {
                 if !self.var_exists(name) {
                     self.type_error(UndefinedSymbol, e.region);
                 }
@@ -213,7 +211,7 @@ impl<'a, 'b> AstVisitor<()> for TypeChecker<'a, 'b> {
         use StmtKind::*;
         match &s.kind {
             Expr(e) => self.visit_expr(e),
-            VarDef(name, init) => {
+            Var(name, init) => {
                 self.visit_expr(init);
                 if let Some(inferred_ty) = self.infer_type(init) {
                     if let Some(ty) = self.get_var_type(name) {
@@ -266,7 +264,7 @@ impl<'a, 'b> AstVisitor<()> for TypeChecker<'a, 'b> {
 
 #[cfg(test)]
 mod tests {
-    use crate::lexer::{Token, TokenStream};
+    use crate::lexer::{Token, Lexer};
     use crate::parser::Parser;
 
     use super::*;
@@ -279,7 +277,7 @@ mod tests {
         }";
 
         let source = Source::new(input, "<string literal>");
-        let mut tokens = TokenStream::new(&source);
+        let mut tokens = Lexer::new(&source);
         assert_eq!(tokens.eat(), Token::Func);
 
         let mut parser = Parser::new(tokens);

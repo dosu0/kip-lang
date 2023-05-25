@@ -1,15 +1,2 @@
-[package]
-name = "kip" # maybe kip-lang
-version = "0.1.0"
-edition = "2018"
-authors = ["Phoenix"]
-description = "Just another programming language"
-
-[dependencies]
-atty = "0.2.14"
-termcolor = "1.1.2"
-structopt = "0.3.22"
-
-[dependencies.log]
-version = "0.4"
-features = ["std"]
+[workspace]
+members = ["compiler"]

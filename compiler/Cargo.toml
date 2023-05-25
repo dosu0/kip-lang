@@ -1,0 +1,19 @@
+[package]
+name = "kip"
+version = "0.1.0"
+edition = "2021"
+authors = ["Phoenix"]
+description = "a compiled progamming language"
+
+[dependencies]
+atty = "0.2.14"
+termcolor = "1.1.2"
+lazy_static = "1.4.0"
+# This is what I'm using for an interner
+# The interner helps me reduce the amount string copies that my compiler does
+ustr = "0.9.0"
+anyhow = "1.0.61"
+
+[dependencies.clap]
+version = "3.2.17"
+features = ["derive", "cargo"]

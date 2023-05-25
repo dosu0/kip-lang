@@ -1,0 +1,34 @@
+-- Kip's formal grammar
+-- NOTE: Not all of these are implemented in the parser yet
+
+module		  -> declaration* EOF
+declaration	-> extern | func_decl | var_decl | impt | statement
+func_decl		-> "func" func_proto block
+extern_decl -> "extern" "func" func_proto ';'
+func_proto  -> IDENTIFIER '(' parameter_list? ')'
+parameter_list -> parameter ( ',' parameter )*
+parameter   -> IDENTIFIER type_annotation
+var_decl		-> "var" type_annotation? IDENTIFIER ( '=' expression )? ';'
+statement		-> expr_stmt | ret_stmt | block
+expr_stmt		-> expression ';'?
+ret_stmt		-> "ret" expression ';'
+block				-> '{' declaration* '}'
+
+type_annotation -> ':' type
+type 						-> IDENTIFIER ( '<' type '>' )?
+
+expression  -> assignment
+assignment  -> ( IDENTIFIER ( "=" | "+=" | "-=" | "*=" | "/=" | "%=" ) assignment ) | conditional
+conditional -> ( "if" logic_or block ( "else" block )? ) | logic_or
+logic_or    -> logic_and ( "||" logic_and )*
+logic_and   -> equality ( "&&" equality )*
+equality    -> comparison ( ( "!=" | "==" ) comparison )*
+comparison  -> term ( ( '>' | ">=" | '<' | "<=" ) term )*
+term        -> factor ( ( '+' | '-' ) factor )*
+factor      -> unary ( ( '*' | '/' | '%' ) unary )*
+unary       -> ( ( '!' | '-' | "move" | "clone" ) unary ) | call
+-- 'primary' should really only be an IDENTIFIER
+call        -> primary ( '(' arguments? ')' )*
+primary     -> IDENTIFIER | NUMBER | STRING | CHARACTER | '(' expression ')'
+
+arguments   -> expression ( ',' expression )*

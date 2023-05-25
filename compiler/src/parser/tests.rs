@@ -11,6 +11,7 @@ pub fn parse(source_code: &'static str) -> Vec<Box<Stmt>> {
 
     let stmts: Result<Vec<_>, _> = parser.parse()
         .into_iter().collect();
+    stmts.expect("failed to parse")
 }
 
 fn extract_stmt<'a>(module: &'a Vec<Box<Stmt>>) -> &'a Stmt {

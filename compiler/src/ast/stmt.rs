@@ -3,8 +3,6 @@ use super::region::Region;
 use super::ty::Type;
 use crate::name::Name;
 
-use anyhow::Result;
-
 pub type Block = Vec<Box<Stmt>>;
 
 pub type Module = Vec<Box<Stmt>>;
@@ -55,11 +53,4 @@ pub struct Param {
     pub name: Name,
     // 'type' is a reserved word in rust :(
     pub ty: Type,
-}
-
-
-impl Param {
-    fn new(name: Name, ty: Type) -> Self {
-        Self { name, ty }
-    }
 }

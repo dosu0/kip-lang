@@ -2,6 +2,7 @@
 //!
 
 use crate::cli::Options;
+use crate::codegen::CodeGenerator;
 use crate::lexer::Lexer;
 use crate::parser::Parser;
 use crate::scopechk::ScopeChecker;
@@ -27,7 +28,7 @@ pub fn run(options: Options) -> Result<()> {
         io::stdin().read_to_string(&mut source.contents)?;
         source
     } else {
-        bail!("No input");
+        bail!("Please provide an input file");
     };
 
     let mut lexer = Lexer::new(&source);
@@ -47,10 +48,24 @@ pub fn run(options: Options) -> Result<()> {
 
     if !parse_errors.is_empty() {
         bail!("Failed to parse file");
-    }
+    } /* else {
+          for stmt in &module {
+              println!("{stmt:#?}");
+          }
+      } */
 
     let mut scopechk = ScopeChecker::new();
     scopechk.check(&module);
+
+    if let Some(output_file) = options.output {
+        let output_file = output_file.to_string_lossy().into_owned();
+        let mut codegen = CodeGenerator::new();
+        codegen.gen(&module);
+
+        let intermediate_code = codegen.get_intermediate_code();
+        fs::write(&output_file, intermediate_code)
+            .with_context(|| format!("failed to write intermediate code to {}", &output_file))?;
+    }
 
     Ok(())
 }

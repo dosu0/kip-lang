@@ -14,6 +14,7 @@ mod parser;
 mod scopechk;
 mod source;
 mod token;
+mod codegen;
 
 pub fn generate_error_message(base_message: &'static str, source: &Source, region: Region) -> String {
     let error_source_code = source.context_of(region);

@@ -140,7 +140,10 @@ impl<'a> Lexer<'a> {
             '*' => self.add_token(Star),
             ':' => self.add_token(Colon),
             '%' => self.add_token(Percent),
-            '=' => self.add_token(Equal),
+            '=' => match self.next_is('=') {
+                true => self.add_token(DoubleEqual),
+                false => self.add_token(Equal),
+            },
             '.' => self.add_token(Dot),
             '/' => self.add_token(Slash),
             _ => eprintln!("Error: unexpected character"),
@@ -289,12 +292,12 @@ mod tests {
 
     #[test]
     fn comparison() {
-        let input = "9000 >= 1";
+        let input = "9000 == 1";
         let source = Source::new(input, "<string literal>");
         let mut lexer = Lexer::new(&source);
         let tokens = lexer.lex();
         assert_eq!(tokens[0], Literal(9000.into()));
-        assert_eq!(tokens[1], Ge);
+        assert_eq!(tokens[1], DoubleEqual);
         assert_eq!(tokens[2], Literal(1.into()));
     }
 

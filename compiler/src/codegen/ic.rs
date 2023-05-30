@@ -2,15 +2,20 @@ use crate::name::Name as Symbol;
 use std::fmt;
 
 pub use crate::ast::BinOp;
+#[derive(Clone, Copy)]
 pub enum Instruction {
-    // psuedo instruction
+    /// ex. _L0:
     Label(Symbol),
+    /// ex. _t0 := 4
     Assign(Symbol, Expr),
+    // ex. goto _L1
     Goto(Symbol),
     /// [`Ifz`]: if-zero
-    /// ifz _t0 goto _L0
+    /// ex. ifz _t0 goto _L0
     Ifz(Primary, Symbol),
+    /// ex. arg x
     Arg(Primary),
+    /// ex. ret x
     Ret(Option<Primary>),
 }
 
@@ -45,7 +50,7 @@ impl fmt::Display for Instruction {
     }
 }
 
-#[derive(Clone, Hash, PartialEq, Eq)]
+#[derive(Clone, Copy, Hash, PartialEq, Eq)]
 pub enum Primary {
     Const(ConstKind),
     Var(Symbol)
@@ -60,7 +65,7 @@ impl fmt::Display for Primary {
     }
 }
 
-#[derive(Clone, Hash, PartialEq, Eq)]
+#[derive(Clone, Copy, Hash, PartialEq, Eq)]
 pub enum ConstKind {
     Int(i64),
     Str(Symbol),
@@ -75,7 +80,7 @@ impl fmt::Display for ConstKind {
     }
 }
 
-#[derive(Clone, Hash, PartialEq, Eq)]
+#[derive(Clone, Copy, Hash, PartialEq, Eq)]
 pub enum Expr {
     Call(Symbol),
     Binary(BinOp, Primary, Primary),

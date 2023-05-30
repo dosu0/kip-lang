@@ -40,6 +40,7 @@ impl Source {
         self.contents.chars().count()
     }
 
+    // this is a crappy way of trying to get the surrounding source code of a "Region" of code
     pub fn context_of(&self, region: Region) -> Context {
         let mut context_start = region.start();
         let mut context_end = region.end();

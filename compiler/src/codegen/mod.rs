@@ -3,46 +3,40 @@
 //! high-level enough that it's machine indepedent, but low level enough that it's easy (enough) to
 //! convert to assembly/machine code.
 
-use std::collections::HashMap;
-
+/// use std::collections::HashMap;
 use crate::ast::Lit;
 
+use crate::ast::stmt::Block;
+use crate::ast::stmt::{FuncProto, Module, Stmt};
 use crate::ast::visit::ExprVisitor;
 use crate::ast::visit::StmtVisitor;
 use crate::ast::visit::{walk_expr, walk_stmt};
-use crate::ast::stmt::{FuncProto, Module, Stmt};
-use crate::ast::stmt::Block;
 use crate::ast::BinOp;
 use crate::ast::Expr;
 use crate::ast::Region;
 use crate::ast::UnOp;
-use crate::name::Name as Symbol;
 use crate::name::name;
+use crate::name::Name as Symbol;
+
+pub mod ic;
+mod optimize;
+
+use ic::Instruction;
+use optimize::elim_common_subexprs;
 
 use std::fmt::Write;
 
-/// [`ic`]: intermediate code
-pub mod ic;
-
 fn blocks(instructions: &mut Vec<ic::Instruction>) -> Vec<&mut [ic::Instruction]> {
-    instructions.split_inclusive_mut(|i| i.is_ifz()).collect()
-}
-
-fn elim_common_subexprs(block: &mut [ic::Instruction]) {
-    use ic::Instruction::Assign;
-    use ic::{Expr, Primary};
-
-    // list of the avaible expressions
-    let mut available_expressions: HashMap<Symbol, Expr> = HashMap::new();
-
-    for instruction in block {
-        todo!()
-    }
+    // a block is a sequence of instructions where control enters and leaves the sequence at only
+    // one place respectively
+    instructions
+        .split_inclusive_mut(|i| i.is_ifz() || i.is_label())
+        .collect()
 }
 
 #[derive(Default)]
 pub struct CodeGenerator {
-    instructions: Vec<ic::Instruction>,
+    instructions: Vec<Instruction>,
     // the number of temporary variables the code generator has created
     tmp_var: usize,
     // the number of temporary labels the code generator has created
@@ -58,6 +52,8 @@ impl CodeGenerator {
         for stmt in module {
             walk_stmt(self, &stmt);
         }
+
+        self.optimize()
     }
     // returns a Symbol in the form of "_t{number}" to store temporary values
     fn new_tmp_var(&mut self) -> Symbol {
@@ -94,65 +90,65 @@ impl CodeGenerator {
     }
 
     fn emit_assign(&mut self, name: Symbol, init: ic::Expr) {
-        self.instructions.push(ic::Instruction::Assign(name, init));
+        self.instructions.push(Instruction::Assign(name, init));
     }
 
     fn emit_assign_call(&mut self, name: Symbol, func: Symbol) {
         self.instructions
-            .push(ic::Instruction::Assign(name, ic::Expr::Call(func)));
+            .push(Instruction::Assign(name, ic::Expr::Call(func)));
     }
 
     fn emit_assign_binary(&mut self, name: Symbol, op: ic::BinOp, lhs: Symbol, rhs: Symbol) {
-        self.instructions.push(ic::Instruction::Assign(
+        self.instructions.push(Instruction::Assign(
             name,
             ic::Expr::Binary(op, ic::Primary::Var(lhs), ic::Primary::Var(rhs)),
         ));
     }
     fn emit_arg(&mut self, name: Symbol) {
         self.instructions
-            .push(ic::Instruction::Arg(ic::Primary::Var(name)));
+            .push(Instruction::Arg(ic::Primary::Var(name)));
     }
 
     fn emit_ifz(&mut self, condition: Symbol, label: Symbol) {
         self.instructions
-            .push(ic::Instruction::Ifz(ic::Primary::Var(condition), label));
+            .push(Instruction::Ifz(ic::Primary::Var(condition), label));
     }
 
     fn emit_label(&mut self, label: Symbol) {
-        self.instructions.push(ic::Instruction::Label(label));
+        self.instructions.push(Instruction::Label(label));
     }
 
     fn emit_ret(&mut self, value: Option<Symbol>) {
         self.instructions
-            .push(ic::Instruction::Ret(value.map(ic::Primary::Var)));
+            .push(Instruction::Ret(value.map(ic::Primary::Var)));
     }
 
+    fn emit_goto(&mut self, label: Symbol) {
+        self.instructions.push(Instruction::Goto(label))
+    }
+
+    // FIXME: i should probably do this as a display trait or something
     pub fn get_intermediate_code(&mut self) -> String {
         let mut ic = String::new();
+        // this tabs all instructions that arent labels
         for instruction in &self.instructions {
-            writeln!(&mut ic, "{}", instruction).unwrap();
+            match instruction {
+                Instruction::Label(_) => writeln!(&mut ic, "{instruction}").unwrap(),
+                _ => writeln!(&mut ic, "    {instruction}").unwrap(),
+            }
         }
 
-/*
-        self.optimize();
-
-        println!("; optimized instructions");
-        for instruction in &self.instructions {
-            println!("{}", instruction);
-        }
-*/
         ic
     }
 
     pub fn optimize(&mut self) {
-        for block in blocks(&mut self.instructions) {
-            elim_common_subexprs(block);
+        for basic_block in blocks(&mut self.instructions) {
+            elim_common_subexprs(basic_block);
         }
     }
 }
 /// Only [`CodeGenerator::visit_expr`] returns a string (the name of temporary it generates)
 impl StmtVisitor<Option<Symbol>> for CodeGenerator {
-
     fn visit_expr_stmt(&mut self, expr: &Expr, _: Region) -> Option<Symbol> {
         walk_expr(self, &expr)
     }
@@ -169,13 +165,18 @@ impl StmtVisitor<Option<Symbol>> for CodeGenerator {
         None
     }
 
-    fn visit_func(&mut self, proto: &FuncProto, body: &Vec<Box<Stmt>>, _: Region) -> Option<Symbol> {
+    fn visit_func(
+        &mut self,
+        proto: &FuncProto,
+        body: &Vec<Box<Stmt>>,
+        _: Region,
+    ) -> Option<Symbol> {
         self.emit_label(proto.name);
         self.visit_block(body)
     }
 
     // TODO: implement something
-    fn visit_extern(&mut self, proto: &FuncProto, _: Region) -> Option<Symbol> {
+    fn visit_extern(&mut self, _: &FuncProto, _: Region) -> Option<Symbol> {
         None
     }
 
@@ -221,25 +222,36 @@ impl ExprVisitor<Option<Symbol>> for CodeGenerator {
         Some(t)
     }
 
-    fn visit_unary_expr(&mut self, _: UnOp, rhs: &Expr, _: Region) -> Option<Symbol> {
+    fn visit_unary_expr(&mut self, _: UnOp, _: &Expr, _: Region) -> Option<Symbol> {
         todo!()
     }
 
-    fn visit_binary_expr(&mut self, op: BinOp, lhs: &Expr, rhs: &Expr, _: Region) -> Option<Symbol> {
+    fn visit_binary_expr(
+        &mut self,
+        op: BinOp,
+        lhs: &Expr,
+        rhs: &Expr,
+        _: Region,
+    ) -> Option<Symbol> {
         let t1 = walk_expr(self, lhs).unwrap();
         let t2 = walk_expr(self, rhs).unwrap();
         let t = self.new_tmp_var();
-        self.emit_assign_binary(t.clone(), op, t1, t2);
+        self.emit_assign_binary(t, op, t1, t2);
         Some(t)
     }
 
-    fn visit_call_expr(&mut self, func_name: Symbol, args: &Vec<Box<Expr>>, _: Region) -> Option<Symbol> {
+    fn visit_call_expr(
+        &mut self,
+        func_name: Symbol,
+        args: &Vec<Box<Expr>>,
+        _: Region,
+    ) -> Option<Symbol> {
         for arg in args {
             let t = walk_expr(self, arg).unwrap();
             self.emit_arg(t);
         }
         let t = self.new_tmp_var();
-        self.emit_assign_call(t.clone(), func_name.clone());
+        self.emit_assign_call(t, func_name);
 
         Some(t)
     }
@@ -251,13 +263,22 @@ impl ExprVisitor<Option<Symbol>> for CodeGenerator {
         else_block: Option<&Block>,
         _: Region,
     ) -> Option<Symbol> {
+        // evalute the condition into a temporary
         let t = walk_expr(self, condition).unwrap();
-        let label = self.new_tmp_label();
-        self.emit_ifz(t, label.clone());
+
+        // this label is
+        let else_label = self.new_tmp_label();
+        let end_label = self.new_tmp_label();
+
+        self.emit_ifz(t, else_label);
         self.visit_block(then_block);
-        self.emit_label(label);
-        if let Some(ref else_block) = else_block {
+        if else_block.is_some() {
+            self.emit_goto(end_label);
+        }
+        self.emit_label(else_label);
+        if let Some(else_block) = else_block {
             self.visit_block(else_block);
+            self.emit_label(end_label);
         }
 
         // TODO:

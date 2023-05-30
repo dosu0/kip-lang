@@ -21,6 +21,7 @@ pub struct ScopeChecker {
 }
 
 // FIXME: This current implementation has a lot of memory overhead
+// FIXME: Return errors instead of just printing them
 impl ScopeChecker {
     pub fn new() -> ScopeChecker {
         Self {
@@ -51,7 +52,7 @@ impl ScopeChecker {
         if self.current_scope().contains_key(&name) {
             eprintln!("variable `{}` already exists in this scope", name);
         } else {
-        self.current_scope_mut().insert(name, false);
+            self.current_scope_mut().insert(name, false);
         }
     }
 
@@ -111,7 +112,7 @@ impl StmtVisitor<()> for ScopeChecker {
         self.define(name);
     }
 
-    fn visit_func(&mut self, proto: &FuncProto, body: &Vec<Box<Stmt>>, _: Region) {
+    fn visit_func(&mut self, proto: &FuncProto, body: &Block, _: Region) {
         self.declare(proto.name);
         self.define(proto.name);
 

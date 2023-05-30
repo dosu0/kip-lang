@@ -1,13 +1,13 @@
 /**
  * [`main.kip`]: A fully featured kip source file
- * This should print `sum: 12` to stdout if linked with libc
+ * This should print `sum: 80` to stdout if linked with libc
  */
 
-extern func puts(s: str): s32;
-extern func putchar(c: s32): s32;
+extern func puts(s: str): int32;
+extern func putchar(c: int32): int32;
 
 // print a digit
-func printd(d: s32) {
+func printd(d: int32) {
     // negative numbers
     if d < 0 {
         putchar('-');
@@ -21,15 +21,21 @@ func printd(d: s32) {
     putchar(d % 10 + '0');
 }
 
-func add(a: s32, b: s32): s32 {
+func add(a: int32, b: int32): int32 {
     ret a + b;
 }
 
 func main() {
-    var x: s32 = 4;
-    var y: s32 = 8;
-    var sum: s32 = add(x, y);
+    var w = 4 * 4;
+    var x = 8 * 8;
+    var y = w + x;
+    var z = w * x * y;
+    var sum = add(w, x);
 
-    puts("sum: ");
-    printd(sum);
+    if sum == 80 {
+        puts("sum: ");
+        printd(sum);
+    } else {
+        puts("err");
+    }
 }

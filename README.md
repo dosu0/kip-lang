@@ -1,6 +1,14 @@
 # Kip 
 Kip is toy programming language I'm making to understand how compilers work.
 
+# Try it out
+
+Run this command to compile the example file:
+`cargo run example/main.kip -o main.ic`
+
+Then open `main.ic` to see the output in three address code
+
+
 # Resources
 I took inspiration from a lot of resources so here are all of them:
 - ["My First Language Frontend with LLVM Tutorial"](https://llvm.org/docs/tutorial/MyFirstLanguageFrontend/index.html)

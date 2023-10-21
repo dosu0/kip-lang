@@ -7,9 +7,12 @@ use crate::token::TokenKind::*;
 
 use anyhow::{anyhow, Result};
 
+type StmtResult = Result<Box<Stmt>>;
+
+
 impl Parser {
     // NOTE: might rename to definition
-    pub(super) fn declaration(&mut self) -> Result<Box<Stmt>> {
+    pub(super) fn declaration(&mut self) -> StmtResult {
         let decl = match self.peek().kind {
             Extern => self.extern_decl(),
             Func => self.func_decl(),
@@ -26,7 +29,7 @@ impl Parser {
         return decl;
     }
 
-    fn extern_decl(&mut self) -> Result<Box<Stmt>> {
+    fn extern_decl(&mut self) -> StmtResult {
         // eat 'extern'
         let extern_kw = self.eat();
         self.expect(Func, "expected 'func'")?;
@@ -38,7 +41,8 @@ impl Parser {
         ))
     }
 
-    fn func_decl(&mut self) -> Result<Box<Stmt>> {
+    // Parse function declarations
+    fn func_decl(&mut self) -> StmtResult {
         // eat 'func'
         let func_kw = self.eat();
         let proto = self.proto()?;
@@ -52,6 +56,7 @@ impl Parser {
         ))
     }
 
+    // helper function to parse punction prototypes
     fn proto(&mut self) -> Result<FuncProto> {
         // note where the function prototype starts
         let proto_start = self.peek();
@@ -92,7 +97,7 @@ impl Parser {
         })
     }
 
-    fn statement(&mut self) -> Result<Box<Stmt>> {
+    fn statement(&mut self) -> StmtResult {
         match self.peek().kind {
             Ret => self.ret_stmt(),
             OpenBrace => {
@@ -107,7 +112,8 @@ impl Parser {
         }
     }
 
-    fn ret_stmt(&mut self) -> Result<Box<Stmt>> {
+    // parses return statements
+    fn ret_stmt(&mut self) -> StmtResult {
         // eat 'ret'
         let ret_kw = self.eat();
         let value = self.expression()?;
@@ -131,7 +137,8 @@ impl Parser {
         Ok(stmts)
     }
 
-    fn expr_stmt(&mut self) -> Result<Box<Stmt>> {
+    // parses statements that could also be considered as an expression
+    fn expr_stmt(&mut self) -> StmtResult {
         let expr_start = self.peek();
         let expr = self.expression()?;
 
@@ -147,7 +154,7 @@ impl Parser {
     }
 
     /// TODO: make the initializer optional
-    fn var_decl(&mut self) -> Result<Box<Stmt>> {
+    fn var_decl(&mut self) -> StmtResult {
         // eat 'var'
         let var_kw = self.eat();
         let name = self.expect_ident("expected variable name")?;
@@ -165,7 +172,7 @@ impl Parser {
         ))
     }
 
-    fn impt(&mut self) -> Result<Box<Stmt>> {
+    fn impt(&mut self) -> StmtResult {
         use Lit::Str;
 
         // eat '@impt'

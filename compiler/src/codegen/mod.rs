@@ -20,6 +20,7 @@ use crate::name::Name as Symbol;
 
 pub mod ic;
 mod optimize;
+mod visit;
 
 use ic::Instruction;
 use optimize::elim_common_subexprs;

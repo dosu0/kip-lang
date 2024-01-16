@@ -7,7 +7,7 @@ use std::path::PathBuf;
 pub struct Options {
     /// The input source file, stdin if not specified
     pub input: Option<PathBuf>,
-    /// Where to output the intermediate; stdout if not specified
+    /// Where to output the intermediate code
     #[clap(short, long)]
     pub output: Option<PathBuf>,
 }

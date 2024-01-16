@@ -41,29 +41,3 @@ impl From<char> for Lit {
         Self::Char(c)
     }
 }
-/* impl Lit {
-    pub fn as_int(&self) -> Option<i64> {
-        if let Self::Int(v) = self {
-            Some(*v)
-        } else {
-            None
-        }
-    }
-
-    pub fn as_str(&self) -> Option<String> {
-        if let Self::Str(v) = self {
-            Some(*v)
-        } else {
-            None
-        }
-    }
-
-    pub fn as_char(&self) -> Option<char> {
-        if let Self::Char(v) = self {
-            Some(*v)
-        } else {
-            None
-        }
-    }
-} */
-

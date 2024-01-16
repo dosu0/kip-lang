@@ -82,13 +82,13 @@ impl Expr {
         matches!(self.kind, ExprKind::Cond(..))
     }
 
-    /*    #[inline]
+    #[inline]
     pub fn to<E: Into<Region>>(&self, end: E) -> Region {
         self.region.to(end)
-    } */
+    }
 
-    #[inline]
+    /* #[inline]
     pub fn to(&self, end: &Expr) -> Region {
         self.region.to(end.region)
-    }
+    } */
 }

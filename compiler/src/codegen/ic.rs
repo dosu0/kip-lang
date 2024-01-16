@@ -50,7 +50,7 @@ impl fmt::Display for Instruction {
     }
 }
 
-#[derive(Clone, Copy, Hash, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
 pub enum Primary {
     Const(ConstKind),
     Var(Symbol)
@@ -65,7 +65,7 @@ impl fmt::Display for Primary {
     }
 }
 
-#[derive(Clone, Copy, Hash, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
 pub enum ConstKind {
     Int(i64),
     Str(Symbol),
@@ -80,7 +80,7 @@ impl fmt::Display for ConstKind {
     }
 }
 
-#[derive(Clone, Copy, Hash, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
 pub enum Expr {
     Call(Symbol),
     Binary(BinOp, Primary, Primary),

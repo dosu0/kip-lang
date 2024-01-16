@@ -29,6 +29,7 @@ pub enum StmtKind {
 #[derive(Debug, PartialEq)]
 pub struct Stmt {
     pub kind: StmtKind,
+    // the source code region where the statement appears
     pub region: Region,
 }
 

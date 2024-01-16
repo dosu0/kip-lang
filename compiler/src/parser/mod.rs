@@ -16,12 +16,11 @@ pub mod ty;
 
 use anyhow::{bail, Result};
 
-use crate::ast::{Stmt, Region};
+use crate::ast::{Region, Stmt};
 use crate::generate_error_message;
 use crate::name::Name;
 use crate::source::Source;
 use crate::token::{Token, TokenKind, TokenKind::*};
-
 
 pub struct Parser {
     source: Source,

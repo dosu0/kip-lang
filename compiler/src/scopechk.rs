@@ -5,9 +5,9 @@ use crate::ast::Region;
 use crate::ast::UnOp;
 use std::collections::HashMap;
 
-use crate::ast::Expr;
 use crate::ast::stmt::{FuncProto, Module, Stmt};
 use crate::ast::visit::{walk_expr, walk_stmt, StmtVisitor};
+use crate::ast::Expr;
 use crate::ast::ExprVisitor;
 use crate::name::Name as Symbol;
 
@@ -89,7 +89,7 @@ impl ScopeChecker {
             self.declare(param.name);
             self.define(param.name);
         }
-        
+
         self.check(body);
 
         self.end_scope();
@@ -130,7 +130,7 @@ impl StmtVisitor<()> for ScopeChecker {
         todo!()
     }
 
-    fn visit_block(&mut self, stmts: &Vec<Box<Stmt>>)  {
+    fn visit_block(&mut self, stmts: &Vec<Box<Stmt>>) {
         self.start_scope();
         self.check(stmts);
         self.end_scope();
@@ -138,8 +138,7 @@ impl StmtVisitor<()> for ScopeChecker {
 }
 
 impl ExprVisitor<()> for ScopeChecker {
-    fn visit_lit_expr(&mut self, _: Lit, _: Region) {
-    }
+    fn visit_lit_expr(&mut self, _: Lit, _: Region) {}
 
     fn visit_variable_expr(&mut self, var: Symbol, _: Region) {
         let initialized = self.current_scope().get(&var).unwrap_or(&true);

@@ -1,8 +1,8 @@
-use kip::driver;
 use kip::cli::Options;
+use kip::driver;
 
-use clap::Parser;
 use anyhow::Result;
+use clap::Parser;
 
 fn main() -> Result<()> {
     let options = Options::parse();

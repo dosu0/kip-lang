@@ -53,7 +53,7 @@ impl fmt::Display for Instruction {
 #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
 pub enum Primary {
     Const(ConstKind),
-    Var(Symbol)
+    Var(Symbol),
 }
 
 impl fmt::Display for Primary {

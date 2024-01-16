@@ -1,5 +1,5 @@
-use std::fmt;
 use crate::name::Name;
+use std::fmt;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Lit {

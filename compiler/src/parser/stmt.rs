@@ -9,7 +9,6 @@ use anyhow::{anyhow, Result};
 
 type StmtResult = Result<Box<Stmt>>;
 
-
 impl Parser {
     // NOTE: might rename to definition
     pub(super) fn declaration(&mut self) -> StmtResult {

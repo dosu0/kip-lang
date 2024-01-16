@@ -27,6 +27,9 @@ impl Parser {
             _ => return Ok(Type::Name(type_name)),
         };
 
-        Ok(Type::Int { signed, size: IntSize::new(size) })
+        Ok(Type::Int {
+            signed,
+            size: IntSize::new(size),
+        })
     }
 }

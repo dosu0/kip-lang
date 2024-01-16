@@ -3,7 +3,6 @@ use crate::name::Name;
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum Type {
     // Primitve Types
-
     /// Integer types
     /// examples: 'u8', 's16', 'u32', 's64'
     Int { signed: bool, size: IntSize },

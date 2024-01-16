@@ -6,6 +6,7 @@ extern crate lazy_static;
 
 mod ast;
 pub mod cli;
+mod codegen;
 pub mod driver;
 mod lexer;
 pub mod logger;
@@ -14,9 +15,12 @@ mod parser;
 mod scopechk;
 mod source;
 mod token;
-mod codegen;
 
-pub fn generate_error_message(base_message: &'static str, source: &Source, region: Region) -> String {
+pub fn generate_error_message(
+    base_message: &'static str,
+    source: &Source,
+    region: Region,
+) -> String {
     let error_source_code = source.context_of(region);
     let line = error_source_code.line;
     let width = region.start() - error_source_code.region.start() + 1;

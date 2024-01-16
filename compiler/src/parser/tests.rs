@@ -9,8 +9,7 @@ pub fn parse(source_code: &'static str) -> Vec<Box<Stmt>> {
     let mut lexer = Lexer::new(&source);
     let mut parser = Parser::new(lexer.lex(), &source);
 
-    let stmts: Result<Vec<_>, _> = parser.parse()
-        .into_iter().collect();
+    let stmts: Result<Vec<_>, _> = parser.parse().into_iter().collect();
     stmts.expect("failed to parse")
 }
 

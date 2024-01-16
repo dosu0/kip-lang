@@ -14,7 +14,7 @@ pub trait ExprVisitor<T> {
     fn visit_variable_expr(&mut self, name: Name, region: Region) -> T;
     fn visit_unary_expr(&mut self, op: UnOp, rhs: &Expr, region: Region) -> T;
     fn visit_binary_expr(&mut self, op: BinOp, lhs: &Expr, rhs: &Expr, region: Region) -> T;
-    fn visit_call_expr(&mut self, func_name: Name, params: &Vec<Box<Expr>>, region: Region) -> T;
+    fn visit_call_expr(&mut self, func_name: Name, params: &[Box<Expr>], region: Region) -> T;
     fn visit_cond_expr(
         &mut self,
         condition: &Expr,
@@ -29,8 +29,8 @@ pub trait StmtVisitor<T> {
     fn visit_expr_stmt(&mut self, expr: &Expr, region: Region) -> T;
     fn visit_ret_stmt(&mut self, value: &Expr, region: Region) -> T;
     fn visit_var_stmt(&mut self, name: Name, init: &Expr, region: Region) -> T;
-    fn visit_block(&mut self, stmts: &Vec<Box<Stmt>>) -> T;
-    fn visit_func(&mut self, proto: &FuncProto, body: &Vec<Box<Stmt>>, region: Region) -> T;
+    fn visit_block(&mut self, stmts: &[Box<Stmt>]) -> T;
+    fn visit_func(&mut self, proto: &FuncProto, body: &[Box<Stmt>], region: Region) -> T;
     fn visit_extern(&mut self, proto: &FuncProto, region: Region) -> T;
     fn visit_impt(&mut self, symbol: Name, region: Region) -> T;
 }

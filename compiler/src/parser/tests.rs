@@ -13,11 +13,11 @@ pub fn parse(source_code: &'static str) -> Vec<Box<Stmt>> {
     stmts.expect("failed to parse")
 }
 
-fn extract_stmt<'a>(module: &'a Vec<Box<Stmt>>) -> &'a Stmt {
+fn extract_stmt(module: &[Box<Stmt>]) -> &Stmt {
     module.first().expect("expected stmt")
 }
 
-fn extract_expr<'a>(module: &'a Vec<Box<Stmt>>) -> &'a Expr {
+fn extract_expr(module: &[Box<Stmt>]) -> &Expr {
     let stmt = extract_stmt(module);
 
     match &stmt.kind {

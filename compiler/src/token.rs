@@ -22,7 +22,7 @@ impl Token {
     }
 
     /// convert lexical token to its corresponding binary operator
-    pub fn to_bin_op(&self) -> Option<BinOp> {
+    pub fn to_bin_op(self) -> Option<BinOp> {
         match self.kind {
             Plus => Some(BinOp::Add),
             Minus => Some(BinOp::Sub),
@@ -42,7 +42,7 @@ impl Token {
     }
 
     /// convert lexical token to its corresponding binary operator
-    pub fn to_unary_op(&self) -> Option<UnOp> {
+    pub fn to_unary_op(self) -> Option<UnOp> {
         match self.kind {
             Bang => Some(UnOp::Not),
             Minus => Some(UnOp::Neg),

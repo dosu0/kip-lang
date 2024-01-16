@@ -1,5 +1,5 @@
-///! A simple struct that encapsulates the source code
-///
+//! A simple struct that encapsulates the source code
+//!
 use crate::ast::region::Region;
 
 #[derive(Debug, Clone)]

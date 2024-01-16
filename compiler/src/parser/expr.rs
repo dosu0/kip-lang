@@ -69,7 +69,7 @@ impl Parser {
             lhs = Expr::new(Binary(BinOp::Or, lhs, rhs), expr_start.to(expr_end));
         }
 
-        return Ok(lhs);
+        Ok(lhs)
     }
 
     fn and(&mut self) -> Result<Box<Expr>> {
@@ -84,7 +84,7 @@ impl Parser {
             lhs = Expr::new(Binary(BinOp::And, lhs, rhs), expr_start.to(expr_end));
         }
 
-        return Ok(lhs);
+        Ok(lhs)
     }
 
     /// equality -> comparison ( ( "!=" | "==" ) comparison )*

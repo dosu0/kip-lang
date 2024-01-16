@@ -25,7 +25,9 @@ pub struct Ident {
 }
 
 impl Ident {
+    /*
     pub fn new(name: Name, region: Region) -> Self {
         Self { name, region }
     }
+    */
 }

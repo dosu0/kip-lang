@@ -16,12 +16,14 @@ pub fn elim_common_subexprs(block: &mut [Instruction]) {
                 *expr = Expr::Primary(Primary::Var(*replacement));
             }
 
-            dbg!(&available_expressions);
+            // dbg!(&available_expressions);
             available_expressions.insert(expr, *sym);
         }
     }
 }
 
+// TODO: implement copy propogation
+/*
 pub fn copy_propagation(block: &mut [Instruction]) {
     // this stores all the local expressions in a block
     let mut available_expressions: HashMap<Symbol, &Expr> = HashMap::new();
@@ -44,4 +46,4 @@ pub fn copy_propagation(block: &mut [Instruction]) {
 
         available_expressions.insert(sym, expr);
     } */
-}
+} */

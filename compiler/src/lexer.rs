@@ -48,7 +48,7 @@ impl<'a> Lexer<'a> {
 
         self.add_token(Eof);
         // TODO: get rid of this clone
-        return self.tokens.clone();
+        self.tokens.clone()
     }
 
     pub fn lex_token(&mut self) {

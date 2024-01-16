@@ -25,7 +25,7 @@ impl Parser {
             // self.errors.push(parse_error);
         }
 
-        return decl;
+        decl
     }
 
     fn extern_decl(&mut self) -> StmtResult {

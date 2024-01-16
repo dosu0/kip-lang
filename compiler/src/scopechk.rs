@@ -5,7 +5,7 @@ use crate::ast::Region;
 use crate::ast::UnOp;
 use std::collections::HashMap;
 
-use crate::ast::stmt::{FuncProto, Module, Stmt};
+use crate::ast::stmt::{FuncProto, Stmt};
 use crate::ast::visit::{walk_expr, walk_stmt, StmtVisitor};
 use crate::ast::Expr;
 use crate::ast::ExprVisitor;
@@ -30,9 +30,9 @@ impl ScopeChecker {
         }
     }
 
-    pub fn check(&mut self, module: &Module) {
+    pub fn check(&mut self, module: &[Box<Stmt>]) {
         for stmt in module {
-            walk_stmt(self, &stmt)
+            walk_stmt(self, stmt)
         }
     }
 
@@ -81,7 +81,7 @@ impl ScopeChecker {
         eprintln!("'{}' is not defined", sym)
     }
 
-    fn check_function(&mut self, proto: &FuncProto, body: &Block) {
+    fn check_function(&mut self, proto: &FuncProto, body: &[Box<Stmt>]) {
         self.start_scope();
 
         // bind each parameter to a local variable in the function
@@ -98,7 +98,7 @@ impl ScopeChecker {
 
 impl StmtVisitor<()> for ScopeChecker {
     fn visit_expr_stmt(&mut self, expr: &Expr, _: Region) {
-        walk_expr(self, &expr)
+        walk_expr(self, expr)
     }
 
     fn visit_ret_stmt(&mut self, value: &Expr, _: Region) {
@@ -108,11 +108,11 @@ impl StmtVisitor<()> for ScopeChecker {
     fn visit_var_stmt(&mut self, name: Symbol, init: &Expr, _: Region) {
         self.declare(name);
         // check the initializer before we define the variable
-        self.check_expr(&init);
+        self.check_expr(init);
         self.define(name);
     }
 
-    fn visit_func(&mut self, proto: &FuncProto, body: &Block, _: Region) {
+    fn visit_func(&mut self, proto: &FuncProto, body: &[Box<Stmt>], _: Region) {
         self.declare(proto.name);
         self.define(proto.name);
 
@@ -130,7 +130,7 @@ impl StmtVisitor<()> for ScopeChecker {
         todo!()
     }
 
-    fn visit_block(&mut self, stmts: &Vec<Box<Stmt>>) {
+    fn visit_block(&mut self, stmts: &[Box<Stmt>]) {
         self.start_scope();
         self.check(stmts);
         self.end_scope();
@@ -153,12 +153,12 @@ impl ExprVisitor<()> for ScopeChecker {
         self.check_expr(rhs);
     }
 
-    fn visit_binary_expr(&mut self, _: BinOp, lhs: &Expr, rhs: &Expr, _: Region) -> () {
+    fn visit_binary_expr(&mut self, _: BinOp, lhs: &Expr, rhs: &Expr, _: Region) {
         self.check_expr(lhs);
         self.check_expr(rhs);
     }
 
-    fn visit_call_expr(&mut self, func_name: Symbol, args: &Vec<Box<Expr>>, _: Region) {
+    fn visit_call_expr(&mut self, func_name: Symbol, args: &[Box<Expr>], _: Region) {
         self.check_local(func_name);
 
         for arg in args {

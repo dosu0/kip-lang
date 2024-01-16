@@ -19,10 +19,7 @@ impl Type {
     // Returns true if the type is a primitive type
     // Primitve types include void, integers, and booleans
     fn is_primitive(&self) -> bool {
-        match self {
-            Self::Name(_) => false,
-            _ => true,
-        }
+        !matches!(self, Self::Name(_))
     }
 }
 

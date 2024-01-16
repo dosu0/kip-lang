@@ -1,6 +1,7 @@
 //! Kip driver
 //!
 
+use crate::ast::stmt::Module;
 use crate::cli::Options;
 use crate::codegen::CodeGenerator;
 use crate::lexer::Lexer;
@@ -36,7 +37,7 @@ pub fn run(options: Options) -> Result<()> {
     let mut parser = Parser::new(tokens, &source);
 
     let mut parse_errors = vec![];
-    let module = parser
+    let module: Module = parser
         .parse()
         .into_iter()
         .filter_map(|stmt| stmt.map_err(|e| parse_errors.push(e)).ok())

@@ -25,8 +25,8 @@ pub fn generate_error_message(
     let line = error_source_code.line;
     let width = region.start() - error_source_code.region.start() + 1;
     let error_context = source.slice(error_source_code.region);
-    return format!(
+    format!(
         "{base_message}\nin {}, line {line}\n{error_context}\n{:>width$}",
         source.name, '^'
-    );
+    )
 }

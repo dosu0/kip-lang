@@ -78,11 +78,11 @@ impl Region {
         pos
     }
 
-    pub fn to_str<'a>(&self, source: &'a Source) -> &'a str {
+    pub fn to_str(self, source: &Source) -> &str {
         &source.contents[self.start..self.end()]
     }
 
-    pub fn to_range(&self) -> Range<usize> {
+    pub fn to_range(self) -> Range<usize> {
         self.start..self.end()
     }
 }

@@ -27,14 +27,6 @@ use optimize::elim_common_subexprs;
 
 use std::fmt::Write;
 
-fn blocks(instructions: &mut Vec<ic::Instruction>) -> Vec<&mut [ic::Instruction]> {
-    // a block is a sequence of instructions where control enters and leaves the sequence at only
-    // one place respectively
-    instructions
-        .split_inclusive_mut(|i| i.is_ifz() || i.is_label())
-        .collect()
-}
-
 #[derive(Default)]
 pub struct CodeGenerator {
     instructions: Vec<Instruction>,
@@ -51,7 +43,7 @@ impl CodeGenerator {
 
     pub fn gen(&mut self, module: &Module) {
         for stmt in module {
-            walk_stmt(self, &stmt);
+            walk_stmt(self, stmt);
         }
 
         self.optimize()
@@ -143,7 +135,12 @@ impl CodeGenerator {
     }
 
     pub fn optimize(&mut self) {
-        for basic_block in blocks(&mut self.instructions) {
+        // a block is a sequence of instructions where control enters and leaves the sequence at only
+        // one place respectively
+        let blocks = self
+            .instructions
+            .split_inclusive_mut(|i| i.is_ifz() || i.is_label());
+        for basic_block in blocks {
             elim_common_subexprs(basic_block);
         }
     }
@@ -151,7 +148,7 @@ impl CodeGenerator {
 /// Only [`CodeGenerator::visit_expr`] returns a string (the name of temporary it generates)
 impl StmtVisitor<Option<Symbol>> for CodeGenerator {
     fn visit_expr_stmt(&mut self, expr: &Expr, _: Region) -> Option<Symbol> {
-        walk_expr(self, &expr)
+        walk_expr(self, expr)
     }
 
     fn visit_ret_stmt(&mut self, value: &Expr, _: Region) -> Option<Symbol> {
@@ -166,12 +163,7 @@ impl StmtVisitor<Option<Symbol>> for CodeGenerator {
         None
     }
 
-    fn visit_func(
-        &mut self,
-        proto: &FuncProto,
-        body: &Vec<Box<Stmt>>,
-        _: Region,
-    ) -> Option<Symbol> {
+    fn visit_func(&mut self, proto: &FuncProto, body: &[Box<Stmt>], _: Region) -> Option<Symbol> {
         self.emit_label(proto.name);
         self.visit_block(body)
     }
@@ -186,7 +178,7 @@ impl StmtVisitor<Option<Symbol>> for CodeGenerator {
         None
     }
 
-    fn visit_block(&mut self, block: &Block) -> Option<Symbol> {
+    fn visit_block(&mut self, block: &[Box<Stmt>]) -> Option<Symbol> {
         for stmt in block {
             walk_stmt(self, stmt);
         }
@@ -244,7 +236,7 @@ impl ExprVisitor<Option<Symbol>> for CodeGenerator {
     fn visit_call_expr(
         &mut self,
         func_name: Symbol,
-        args: &Vec<Box<Expr>>,
+        args: &[Box<Expr>],
         _: Region,
     ) -> Option<Symbol> {
         for arg in args {

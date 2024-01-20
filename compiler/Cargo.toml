@@ -11,9 +11,9 @@ termcolor = "1.1.2"
 lazy_static = "1.4.0"
 # This is what I'm using for an interner
 # The interner helps me reduce the amount string copies that my compiler does
-ustr = "0.9.0"
+ustr = "0.10.0"
 anyhow = "1.0.61"
 
 [dependencies.clap]
-version = "3.2.17"
+version = "4.4.18"
 features = ["derive", "cargo"]

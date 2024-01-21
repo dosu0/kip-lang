@@ -45,24 +45,26 @@ impl<'a> ErrorReporter<'a> {
 
     pub fn report(self) {
         eprintln!("Error: {}", self.message);
-        if let Some(source) = self.source {
-            if let Some(token) = self.token {
-                let LineColumn { line, column } = token.region.line_column(source);
-                eprintln!(
-                    "{} Line {} | {}",
-                    source.name,
-                    line,
-                    &source.contents[token.region.start() - column..token.region.end()]
-                );
-            } else if let Some(region) = self.region {
-                let LineColumn { line, .. } = region.line_column(source);
-                eprintln!(
-                    "{} Line {} | {}",
-                    source.name,
-                    line,
-                    &source.contents[region.start()..region.end()]
-                );
-            }
+        let Some(source) = self.source else {
+            return;
+        };
+
+        if let Some(token) = self.token {
+            let LineColumn { line, column } = token.region.line_column(source);
+            eprintln!(
+                "{} Line {} | {}",
+                source.name,
+                line,
+                &source.contents[token.region.start() - column..token.region.end()]
+            );
+        } else if let Some(region) = self.region {
+            let LineColumn { line, .. } = region.line_column(source);
+            eprintln!(
+                "{} Line {} | {}",
+                source.name,
+                line,
+                &source.contents[region.start()..region.end()]
+            );
         }
     }
 }

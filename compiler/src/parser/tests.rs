@@ -4,6 +4,8 @@ use crate::lexer::Lexer;
 use crate::name::Name;
 use crate::source::Source;
 
+
+
 pub fn parse(source_code: &'static str) -> Vec<Box<Stmt>> {
     let source = Source::new(source_code, "<string literal>");
     let mut lexer = Lexer::new(&source);
@@ -37,13 +39,11 @@ mod stmt {
         let module = parse("var x = 32;");
         let stmt = extract_stmt(&module);
 
-        match stmt.kind {
-            StmtKind::Var(name, ref value) => {
-                assert_eq!(name, "x");
-                assert_eq!(value.kind, 32.into());
-            }
-            _ => panic!("expected a var decl"),
-        }
+        let StmtKind::Var(name, ref value) = stmt.kind else {
+            panic!("expected a var decl");
+        };
+        assert_eq!(name, "x");
+        assert_eq!(value.kind, 32.into());
     }
 
     #[test]
@@ -117,18 +117,16 @@ mod expr {
         let module = parse("a = b = c;");
         let expr = extract_expr(&module);
 
-        if let Assign(var_name, ref expr) = expr.kind {
-            assert_eq!(var_name, "a");
-
-            if let Assign(var_name, ref expr) = expr.kind {
-                assert_eq!(var_name, "b");
-                assert_eq!(expr.kind, Variable(Name::from("c")));
-            } else {
-                panic!("expected assignment expression");
-            }
-        } else {
+        let Assign(var_name, ref expr) = expr.kind else {
             panic!("expected assignment expression");
-        }
+        };
+        assert_eq!(var_name, "a");
+
+        let Assign(var_name, ref expr) = expr.kind else {
+            panic!("expected assignment expression");
+        };
+        assert_eq!(var_name, "b");
+        assert_eq!(expr.kind, Variable(Name::from("c")));
     }
 
     #[test]
@@ -141,20 +139,21 @@ mod expr {
         // TODO: this should be possible :)
         // assert_eq!(expr.to_string(), "Call([Variable(\"bar\"), Variable(\"baz\")])");
 
-        if let Call(fn_name, ref args) = expr.kind {
-            assert_eq!(fn_name, "foo");
+        let Call(fn_name, ref args) = expr.kind else {
+            panic!("expected call expr");
+        };
+        assert_eq!(fn_name, "foo");
 
-            let mut args = args.iter();
+        let mut args = args.iter();
 
-            match args.next().expect("expected arg 1").kind {
-                Variable(name) => assert_eq!(name, "bar"),
-                _ => panic!("expected var"),
-            }
+        match args.next().expect("expected arg 1").kind {
+            Variable(name) => assert_eq!(name, "bar"),
+            _ => panic!("expected var"),
+        }
 
-            match args.next().expect("expected arg 2").kind {
-                Variable(name) => assert_eq!(name, "baz"),
-                _ => panic!("expected var"),
-            }
+        match args.next().expect("expected arg 2").kind {
+            Variable(name) => assert_eq!(name, "baz"),
+            _ => panic!("expected var"),
         }
     }
 
@@ -165,19 +164,18 @@ mod expr {
         let module = parse("(a + b);");
         let expr = extract_expr(&module);
 
-        if let Binary(op, lhs, rhs) = &expr.kind {
-            assert_eq!(op, &BinOp::Add);
-
-            match lhs.kind {
-                Variable(name) => assert_eq!(name, "a"),
-                _ => panic!("expected variable"),
-            }
-            match rhs.kind {
-                Variable(name) => assert_eq!(name, "b"),
-                _ => panic!("expected variable"),
-            }
-        } else {
+        let Binary(op, lhs, rhs) = &expr.kind else {
             panic!("expected binary expression");
+        };
+        assert_eq!(op, &BinOp::Add);
+
+        match lhs.kind {
+            Variable(name) => assert_eq!(name, "a"),
+            _ => panic!("expected variable"),
+        }
+        match rhs.kind {
+            Variable(name) => assert_eq!(name, "b"),
+            _ => panic!("expected variable"),
         }
     }
 
@@ -200,44 +198,41 @@ mod expr {
             _ => panic!("expected a conditional expression"),
         };
 
-        if let Binary(op, ref lhs, ref rhs) = condition.kind {
-            assert_eq!(op, BinOp::Ge);
-
-            match lhs.kind {
-                Variable(name) => assert_eq!(name, "x"),
-                _ => panic!("expected variable reference"),
-            }
-
-            match rhs.kind {
-                Lit(Int(num)) => assert_eq!(num, 0),
-                _ => panic!("expected an integer literal"),
-            }
-        } else {
+        let Binary(op, ref lhs, ref rhs) = condition.kind else {
             panic!("expected binary expression");
+        };
+        assert_eq!(op, BinOp::Ge);
+
+        match lhs.kind {
+            Variable(name) => assert_eq!(name, "x"),
+            _ => panic!("expected variable reference"),
         }
 
-        if let StmtKind::Expr(expr) = &then_branch[0].kind {
-            match expr.kind {
-                Call(name, ref args) => {
-                    assert_eq!(name, "positive");
-                    assert!(args.is_empty());
-                }
-                _ => panic!("expected call expr"),
-            }
-        } else {
+        match rhs.kind {
+            Lit(Int(num)) => assert_eq!(num, 0),
+            _ => panic!("expected an integer literal"),
+        }
+
+        let StmtKind::Expr(expr) = &then_branch[0].kind else {
             panic!("expected expr in then branch");
+        };
+        match expr.kind {
+            Call(name, ref args) => {
+                assert_eq!(name, "positive");
+                assert!(args.is_empty());
+            }
+            _ => panic!("expected call expr"),
         }
 
         let else_branch = else_branch.as_ref().unwrap();
-        if let StmtKind::Expr(expr) = &else_branch[0].kind {
-            if let Call(name, ref args) = expr.kind {
-                assert_eq!(name, "negative");
-                assert!(args.is_empty());
-            } else {
-                panic!("expected call expr");
-            }
-        } else {
-            panic!("expected expr in else_block");
-        }
+        let StmtKind::Expr(expr) = &else_branch[0].kind else {
+            panic!("expected expr in else block");
+        };
+
+        let Call(name, ref args) = expr.kind else {
+            panic!("expected call expr");
+        };
+        assert_eq!(name, "negative");
+        assert!(args.is_empty());
     }
 }

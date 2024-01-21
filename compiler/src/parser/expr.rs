@@ -22,14 +22,13 @@ impl Parser {
             let value = self.assigment()?;
             let assignment_end = value.region;
 
-            if let Variable(name) = lhs.kind {
-                return Ok(Expr::new(
-                    Assign(name, value),
-                    assignment_start.to(assignment_end),
-                ));
-            }
-
-            return Err(anyhow!("invalid assignment target {}", value));
+            let Variable(name) = lhs.kind else {
+                return Err(anyhow!("invalid assignment target {}", value));
+            };
+            return Ok(Expr::new(
+                Assign(name, value),
+                assignment_start.to(assignment_end),
+            ));
         }
 
         Ok(expr)

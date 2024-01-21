@@ -6,15 +6,9 @@
 /// use std::collections::HashMap;
 use crate::ast::Lit;
 
-use crate::ast::stmt::Block;
-use crate::ast::stmt::{FuncProto, Module, Stmt};
-use crate::ast::visit::ExprVisitor;
-use crate::ast::visit::StmtVisitor;
-use crate::ast::visit::{walk_expr, walk_stmt};
-use crate::ast::BinOp;
-use crate::ast::Expr;
-use crate::ast::Region;
-use crate::ast::UnOp;
+use crate::ast::stmt::{Block, FuncProto, Module, Stmt};
+use crate::ast::visit::*;
+use crate::ast::{BinOp, Expr, Region, UnOp};
 use crate::name::name;
 use crate::name::Name as Symbol;
 
@@ -46,7 +40,7 @@ impl CodeGenerator {
             walk_stmt(self, stmt);
         }
 
-        self.optimize()
+        self.optimize_mut()
     }
     // returns a Symbol in the form of "_t{number}" to store temporary values
     fn new_tmp_var(&mut self) -> Symbol {
@@ -121,7 +115,7 @@ impl CodeGenerator {
     }
 
     // FIXME: i should probably do this as a display trait or something
-    pub fn get_intermediate_code(&mut self) -> String {
+    pub fn intermediate_code(&self) -> String {
         let mut ic = String::new();
         // this tabs all instructions that arent labels
         for instruction in &self.instructions {
@@ -134,15 +128,43 @@ impl CodeGenerator {
         ic
     }
 
-    pub fn optimize(&mut self) {
+    // FIXME: i should probably do this as a display trait or something
+    pub fn optimized_intermediate_code(&self) -> String {
+        let mut ic = String::new();
+        let instructions = self.optimize();
+        // this tabs all instructions that arent labels
+        for instruction in instructions {
+            match instruction {
+                Instruction::Label(_) => writeln!(&mut ic, "{instruction}").unwrap(),
+                _ => writeln!(&mut ic, "    {instruction}").unwrap(),
+            }
+        }
+
+        ic
+    }
+    pub fn optimize_mut(&mut self) {
         // a block is a sequence of instructions where control enters and leaves the sequence at only
         // one place respectively
         let blocks = self
             .instructions
             .split_inclusive_mut(|i| i.is_ifz() || i.is_label());
+
         for basic_block in blocks {
             elim_common_subexprs(basic_block);
         }
+    }
+
+    fn optimize(&self) -> Vec<Instruction> {
+        let mut new_instructions: Vec<Instruction> = Vec::with_capacity(self.instructions.len());
+        let blocks = self
+            .instructions
+            .split_inclusive(|instr| instr.is_ifz() || instr.is_label());
+
+        for block in blocks {
+            new_instructions.extend(elim_common_subexprs(block));
+        }
+
+        new_instructions
     }
 }
 /// Only [`CodeGenerator::visit_expr`] returns a string (the name of temporary it generates)

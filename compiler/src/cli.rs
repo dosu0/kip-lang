@@ -10,4 +10,7 @@ pub struct Options {
     /// Where to output the intermediate code
     #[clap(short, long)]
     pub output: Option<PathBuf>,
+    // whether or not to optimize the code
+    #[clap(short = 'O', long, default_value_t = false)]
+    pub optimize: bool,
 }

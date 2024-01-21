@@ -63,7 +63,11 @@ pub fn run(options: Options) -> Result<()> {
         let mut codegen = CodeGenerator::new();
         codegen.gen(&module);
 
-        let intermediate_code = codegen.get_intermediate_code();
+        let intermediate_code = if options.optimize {
+            codegen.optimized_intermediate_code()
+        } else {
+            codegen.intermediate_code()
+        };
         fs::write(&output_file, intermediate_code)
             .with_context(|| format!("failed to write intermediate code to {}", &output_file))?;
     }

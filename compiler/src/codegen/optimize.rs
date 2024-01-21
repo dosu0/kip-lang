@@ -4,22 +4,29 @@ use super::ic::{Expr, Instruction, Primary};
 use crate::name::Name as Symbol;
 use std::collections::HashMap;
 
-pub fn elim_common_subexprs(block: &mut [Instruction]) {
-    // this stores all the local expressions in a block
-    let mut available_expressions: HashMap<&Expr, Symbol> = HashMap::new();
+pub fn elim_common_subexprs(block: &[Instruction]) -> Vec<Instruction> {
+    let mut available_exprs: HashMap<Symbol, Expr> = HashMap::new();
+    let mut new_instructions = Vec::with_capacity(block.len());
 
-    // loops thru all the assignments in the block and adds them to the avaible expressions
     for instruction in block {
-        if let Instruction::Assign(sym, expr) = instruction {
-            // if the assign
-            if let Some((_, replacement)) = available_expressions.get_key_value(expr) {
-                *expr = Expr::Primary(Primary::Var(*replacement));
-            }
+        let mut optimized_instruction = *instruction;
 
-            // dbg!(&available_expressions);
-            available_expressions.insert(expr, *sym);
+        if let Instruction::Assign(symbol, expr) = instruction {
+            for (available_symbol, available_expr) in available_exprs.iter() {
+                if expr == available_expr {
+                    optimized_instruction = Instruction::Assign(
+                        *symbol,
+                        Expr::Primary(Primary::Var(*available_symbol)),
+                    );
+                }
+            }
+            available_exprs.insert(*symbol, *expr);
         }
+
+        new_instructions.push(optimized_instruction);
     }
+
+    new_instructions
 }
 
 // TODO: implement copy propogation
